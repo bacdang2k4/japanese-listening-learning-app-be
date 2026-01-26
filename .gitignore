@@ -1,0 +1,75 @@
+# --- Java & Compile ---
+*.class
+*.log
+*.ctxt
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# --- Build Tools ---
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Gradle
+.gradle
+/build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# --- IDEs & Editors ---
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/resources/archetype-resources/google-services.json
+
+# Eclipse
+.settings/
+.classpath
+.project
+.factorypath
+
+# VS Code
+.vscode/
+
+# Neovim / Vim
+[._]*.s[a-v][a-z]
+[._]*.sw[a-p]
+[._]s[a-rt-v][a-z]
+[._]ss[a-gi-z]
+*.un~
+Session.vim
+.netrwhist
+
+# --- Environment & Secrets ---
+.env
+.env.local
+.env.*.local
+*.properties
+!src/main/resources/*.properties
+!src/test/resources/*.properties
+
+# --- Docker & Infrastructure ---
+.docker/
+docker-compose.override.yml
+*.db
+*.sqlite
+
+# --- Operating System ---
+.DS_Store
+Thumbs.db
+
+.env
