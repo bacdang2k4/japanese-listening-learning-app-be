@@ -10,7 +10,7 @@ public interface TestService {
 
     SubmitTestResponse submitTest(Long resultId, SubmitTestRequest request);
 
-    TestResultDetailResponse getTestResultDetail(Long resultId);
+    TestResultDetailResponse getTestResultDetail(Long resultId, Long profileId);
 
     PaginationResponse<TestHistoryResponse> getTestHistoryByProfile(Long profileId, int page, int size);
 }

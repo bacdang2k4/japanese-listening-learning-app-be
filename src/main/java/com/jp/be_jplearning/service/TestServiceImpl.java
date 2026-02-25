@@ -105,10 +105,19 @@ public class TestServiceImpl implements TestService {
     @Transactional
     public SubmitTestResponse submitTest(Long resultId, SubmitTestRequest request) {
         TestResult testResult = testResultRepository.findById(resultId)
-                .orElseThrow(() -> new ResourceNotFoundException("TestResult not found"));
+                .orElseThrow(
+                        () -> new BusinessException("Cannot submit before starting the test (TestResult not found)"));
+
+        if (!testResult.getProfileTopic().getProfile().getId().equals(request.getProfileId())) {
+            throw new BusinessException("Cannot submit the result of another user");
+        }
+
+        if (testResult.getStatus() == TestResultStatusEnum.Completed) {
+            throw new BusinessException("Test is already completed");
+        }
 
         if (testResult.getStatus() != TestResultStatusEnum.In_Progress) {
-            throw new BusinessException("Test is already completed or not in progress");
+            throw new BusinessException("Test is not in progress");
         }
 
         List<Question> questions = questionRepository.findByTestId(testResult.getTest().getId());
@@ -164,9 +173,13 @@ public class TestServiceImpl implements TestService {
 
     @Override
     @Transactional(readOnly = true)
-    public TestResultDetailResponse getTestResultDetail(Long resultId) {
+    public TestResultDetailResponse getTestResultDetail(Long resultId, Long profileId) {
         TestResult testResult = testResultRepository.findById(resultId)
                 .orElseThrow(() -> new ResourceNotFoundException("TestResult not found"));
+
+        if (!testResult.getProfileTopic().getProfile().getId().equals(profileId)) {
+            throw new BusinessException("Cannot access the result of another user");
+        }
 
         List<LearnerAnswer> learnerAnswers = learnerAnswerRepository.findByTestResultId(resultId);
 
