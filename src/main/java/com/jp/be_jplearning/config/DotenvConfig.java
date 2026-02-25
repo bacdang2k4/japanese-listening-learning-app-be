@@ -1,4 +1,4 @@
-package com.jp.jplearning.config;
+package com.jp.be_jplearning.config;
 
 import io.github.cdimascio.dotenv.Dotenv;
 import org.springframework.context.annotation.Configuration;
