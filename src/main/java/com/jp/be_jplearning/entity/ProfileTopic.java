@@ -21,7 +21,7 @@ public class ProfileTopic {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "profile_level_status_enum")
-    private ProfileLevelStatusEnum status = ProfileLevelStatusEnum.Learning;
+    private ProfileLevelStatusEnum status = ProfileLevelStatusEnum.LEARNING;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @MapsId("profileId")

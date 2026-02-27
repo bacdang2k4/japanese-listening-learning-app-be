@@ -42,7 +42,7 @@ public class TestServiceImpl implements TestService {
             throw new ResourceNotFoundException("Topic not found");
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<AudioTest> testPage = testRepository.findByTopicIdAndStatus(topicId, TestStatusEnum.Published, pageable);
+        Page<AudioTest> testPage = testRepository.findByTopicIdAndStatus(topicId, TestStatusEnum.PUBLISHED, pageable);
 
         List<TestSummaryResponse> content = testPage.getContent().stream().map(test -> TestSummaryResponse.builder()
                 .testId(test.getId())
@@ -61,7 +61,7 @@ public class TestServiceImpl implements TestService {
         AudioTest test = testRepository.findById(testId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
 
-        if (test.getStatus() != TestStatusEnum.Published) {
+        if (test.getStatus() != TestStatusEnum.PUBLISHED) {
             throw new BusinessException("Test is not published");
         }
 
@@ -78,15 +78,16 @@ public class TestServiceImpl implements TestService {
                     pt.setId(ptId);
                     pt.setProfile(profile);
                     pt.setTopic(test.getTopic());
-                    pt.setStatus(ProfileLevelStatusEnum.Learning);
+                    pt.setStatus(ProfileLevelStatusEnum.LEARNING);
                     return profileTopicRepository.save(pt);
                 });
 
         TestResult testResult = new TestResult();
         testResult.setProfileTopic(profileTopic);
         testResult.setTest(test);
-        testResult.setMode(TestModeEnum.valueOf(request.getMode()));
-        testResult.setStatus(TestResultStatusEnum.In_Progress);
+        testResult.setMode(TestModeEnum.valueOf(request.getMode().toUpperCase()));
+        testResult.setStatus(TestResultStatusEnum.IN_PROGRESS);
+        testResult.setStartedAt(LocalDateTime.now());
         testResult.setCreatedAt(LocalDateTime.now());
 
         TestResult saved = testResultRepository.save(testResult);
@@ -97,7 +98,7 @@ public class TestServiceImpl implements TestService {
                 .testId(test.getId())
                 .mode(saved.getMode().name())
                 .status(saved.getStatus().name())
-                .startedAt(saved.getCreatedAt())
+                .startedAt(saved.getStartedAt())
                 .build();
     }
 
@@ -112,11 +113,11 @@ public class TestServiceImpl implements TestService {
             throw new BusinessException("Cannot submit the result of another user");
         }
 
-        if (testResult.getStatus() == TestResultStatusEnum.Completed) {
+        if (testResult.getStatus() == TestResultStatusEnum.COMPLETED) {
             throw new BusinessException("Test is already completed");
         }
 
-        if (testResult.getStatus() != TestResultStatusEnum.In_Progress) {
+        if (testResult.getStatus() != TestResultStatusEnum.IN_PROGRESS) {
             throw new BusinessException("Test is not in progress");
         }
 
@@ -152,14 +153,15 @@ public class TestServiceImpl implements TestService {
         boolean isPassed = score >= (testResult.getTest().getPassCondition() == null ? 80
                 : testResult.getTest().getPassCondition());
 
-        int calculatedTotalTime = testResult.getCreatedAt() != null
-                ? (int) Duration.between(testResult.getCreatedAt(), LocalDateTime.now()).getSeconds()
+        int calculatedTotalTime = testResult.getStartedAt() != null
+                ? (int) Duration.between(testResult.getStartedAt(), LocalDateTime.now()).getSeconds()
                 : 0;
 
         testResult.setTotalTime(calculatedTotalTime);
         testResult.setScore(score);
         testResult.setIsPassed(isPassed);
-        testResult.setStatus(TestResultStatusEnum.Completed);
+        testResult.setStatus(TestResultStatusEnum.COMPLETED);
+        testResult.setCompletedAt(LocalDateTime.now());
 
         testResultRepository.save(testResult);
 

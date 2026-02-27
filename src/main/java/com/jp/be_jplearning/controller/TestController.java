@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api")
-@Tag(name = "Test Management", description = "Endpoints for test flow and execution")
+@Tag(name = "Test Flow", description = "Endpoints for test flow and execution")
 @RequiredArgsConstructor
 public class TestController {
 

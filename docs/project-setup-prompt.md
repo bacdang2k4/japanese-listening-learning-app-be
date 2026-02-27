@@ -1,6 +1,6 @@
 Context:
 - Existing Spring Boot Web API project
-- Java 17+
+- Java 25
 - Spring Boot 3.x
 - MySQL database
 - Controller-based (REST API, not reactive)

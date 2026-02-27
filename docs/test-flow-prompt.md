@@ -18,7 +18,7 @@
 
 ### Database Rules
 
--   database-schema.md is the SINGLE source of truth
+-   database-schema(postgresql).md is the SINGLE source of truth
 -   DO NOT modify schema
 -   DO NOT create new tables
 -   DO NOT rename columns

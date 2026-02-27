@@ -4,12 +4,11 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
-
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 import com.jp.be_jplearning.entity.enums.ProfileStatusEnum;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "profile")
@@ -23,13 +22,14 @@ public class Profile {
     @Column(name = "profile_id")
     private Long id;
 
-    @Column(name = "learner_id")
-    private Long learnerId; // Simplified mapping since Learner isn't requested explicitly yet.
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "learner_id", nullable = false)
+    private Learner learner;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "profile_status_enum")
-    private ProfileStatusEnum status = ProfileStatusEnum.Learning;
+    private ProfileStatusEnum status = ProfileStatusEnum.LEARNING;
 
     @Column(name = "start_date")
     private LocalDateTime startDate;

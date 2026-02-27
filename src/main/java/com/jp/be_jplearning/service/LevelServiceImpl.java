@@ -1,5 +1,6 @@
 package com.jp.be_jplearning.service;
 
+import com.jp.be_jplearning.common.PaginationResponse;
 import com.jp.be_jplearning.common.ResourceNotFoundException;
 import com.jp.be_jplearning.dto.LevelRequest;
 import com.jp.be_jplearning.dto.LevelResponse;
@@ -10,6 +11,10 @@ import com.jp.be_jplearning.repository.LevelRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,10 +45,22 @@ public class LevelServiceImpl implements LevelService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<LevelResponse> getAllLevels() {
-        return levelRepository.findAll().stream()
+    public PaginationResponse<LevelResponse> getAllLevels(int page, int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Level> levelPage = levelRepository.findAll(pageable);
+
+        List<LevelResponse> content = levelPage.getContent().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+
+        return PaginationResponse.<LevelResponse>builder()
+                .content(content)
+                .page(levelPage.getNumber())
+                .size(levelPage.getSize())
+                .totalElements(levelPage.getTotalElements())
+                .totalPages(levelPage.getTotalPages())
+                .last(levelPage.isLast())
+                .build();
     }
 
     @Override
@@ -83,23 +100,12 @@ public class LevelServiceImpl implements LevelService {
         levelRepository.deleteById(levelId);
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public List<LevelResponse> getLevelsByAdmin(Long adminId) {
-        if (!adminRepository.existsById(adminId)) {
-            throw new ResourceNotFoundException("Admin not found with id: " + adminId);
-        }
-        return levelRepository.findByAdminId(adminId).stream()
-                .map(this::mapToResponse)
-                .collect(Collectors.toList());
-    }
-
     private LevelResponse mapToResponse(Level level) {
         return LevelResponse.builder()
                 .id(level.getId())
                 .levelName(level.getLevelName())
                 .adminId(level.getAdmin() != null ? level.getAdmin().getId() : null)
-                .adminName(level.getAdmin() != null ? level.getAdmin().getName() : null)
+                .adminName(level.getAdmin() != null ? level.getAdmin().getUsername() : null)
                 .createdAt(level.getCreatedAt())
                 .build();
     }

@@ -4,14 +4,12 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-
-import java.time.LocalDateTime;
-
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-
 import com.jp.be_jplearning.entity.enums.TestModeEnum;
 import com.jp.be_jplearning.entity.enums.TestResultStatusEnum;
+
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "testresult")
@@ -27,13 +25,13 @@ public class TestResult {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({
-            @JoinColumn(name = "profile_id", referencedColumnName = "profile_id"),
-            @JoinColumn(name = "topic_id", referencedColumnName = "topic_id")
+            @JoinColumn(name = "profile_id", referencedColumnName = "profile_id", nullable = false),
+            @JoinColumn(name = "topic_id", referencedColumnName = "topic_id", nullable = false)
     })
     private ProfileTopic profileTopic;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "test_id")
+    @JoinColumn(name = "test_id", nullable = false)
     private AudioTest test;
 
     @Enumerated(EnumType.STRING)
@@ -53,8 +51,14 @@ public class TestResult {
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "test_result_status_enum")
-    private TestResultStatusEnum status;
+    private TestResultStatusEnum status = TestResultStatusEnum.IN_PROGRESS;
 
-    @Column(name = "created_at")
+    @Column(name = "started_at", updatable = false)
+    private LocalDateTime startedAt;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }

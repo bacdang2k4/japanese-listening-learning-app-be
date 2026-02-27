@@ -1,6 +1,7 @@
 package com.jp.be_jplearning.controller;
 
 import com.jp.be_jplearning.common.ApiResponse;
+import com.jp.be_jplearning.common.PaginationResponse;
 import com.jp.be_jplearning.dto.LevelRequest;
 import com.jp.be_jplearning.dto.LevelResponse;
 import com.jp.be_jplearning.service.LevelService;
@@ -12,8 +13,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api")
 @Tag(name = "Level Management", description = "Endpoints for managing levels")
@@ -22,22 +21,17 @@ public class LevelController {
 
     private final LevelService levelService;
 
-    @PostMapping("/levels")
-    @Operation(summary = "Create a new level")
-    public ResponseEntity<ApiResponse<LevelResponse>> createLevel(@Valid @RequestBody LevelRequest request) {
-        LevelResponse response = levelService.createLevel(request);
-        return new ResponseEntity<>(ApiResponse.<LevelResponse>builder()
-                .success(true)
-                .message("Level created successfully")
-                .data(response)
-                .build(), HttpStatus.CREATED);
-    }
+    // ==========================================
+    // PUBLIC APIs
+    // ==========================================
 
     @GetMapping("/levels")
-    @Operation(summary = "Get all levels")
-    public ResponseEntity<ApiResponse<List<LevelResponse>>> getAllLevels() {
-        List<LevelResponse> response = levelService.getAllLevels();
-        return ResponseEntity.ok(ApiResponse.<List<LevelResponse>>builder()
+    @Operation(summary = "Get all levels (Public)")
+    public ResponseEntity<ApiResponse<PaginationResponse<LevelResponse>>> getAllLevels(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PaginationResponse<LevelResponse> response = levelService.getAllLevels(page, size);
+        return ResponseEntity.ok(ApiResponse.<PaginationResponse<LevelResponse>>builder()
                 .success(true)
                 .message("Levels retrieved successfully")
                 .data(response)
@@ -45,7 +39,7 @@ public class LevelController {
     }
 
     @GetMapping("/levels/{levelId}")
-    @Operation(summary = "Get level by ID")
+    @Operation(summary = "Get level by ID (Public)")
     public ResponseEntity<ApiResponse<LevelResponse>> getLevelById(@PathVariable Long levelId) {
         LevelResponse response = levelService.getLevelById(levelId);
         return ResponseEntity.ok(ApiResponse.<LevelResponse>builder()
@@ -55,8 +49,23 @@ public class LevelController {
                 .build());
     }
 
-    @PutMapping("/levels/{levelId}")
-    @Operation(summary = "Update level by ID")
+    // ==========================================
+    // ADMIN APIs
+    // ==========================================
+
+    @PostMapping("/admin/levels")
+    @Operation(summary = "Create a new level (Admin)")
+    public ResponseEntity<ApiResponse<LevelResponse>> createLevel(@Valid @RequestBody LevelRequest request) {
+        LevelResponse response = levelService.createLevel(request);
+        return new ResponseEntity<>(ApiResponse.<LevelResponse>builder()
+                .success(true)
+                .message("Level created successfully")
+                .data(response)
+                .build(), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/admin/levels/{levelId}")
+    @Operation(summary = "Update level by ID (Admin)")
     public ResponseEntity<ApiResponse<LevelResponse>> updateLevel(
             @PathVariable Long levelId,
             @Valid @RequestBody LevelRequest request) {
@@ -68,25 +77,14 @@ public class LevelController {
                 .build());
     }
 
-    @DeleteMapping("/levels/{levelId}")
-    @Operation(summary = "Delete level by ID")
+    @DeleteMapping("/admin/levels/{levelId}")
+    @Operation(summary = "Delete level by ID (Admin)")
     public ResponseEntity<ApiResponse<Void>> deleteLevel(@PathVariable Long levelId) {
         levelService.deleteLevel(levelId);
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .success(true)
                 .message("Level deleted successfully")
                 .data(null)
-                .build());
-    }
-
-    @GetMapping("/admins/{adminId}/levels")
-    @Operation(summary = "Get all levels by Admin ID")
-    public ResponseEntity<ApiResponse<List<LevelResponse>>> getLevelsByAdmin(@PathVariable Long adminId) {
-        List<LevelResponse> response = levelService.getLevelsByAdmin(adminId);
-        return ResponseEntity.ok(ApiResponse.<List<LevelResponse>>builder()
-                .success(true)
-                .message("Levels retrieved successfully for admin")
-                .data(response)
                 .build());
     }
 }

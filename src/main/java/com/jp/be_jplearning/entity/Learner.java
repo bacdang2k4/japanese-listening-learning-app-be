@@ -13,15 +13,15 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "admin")
+@Table(name = "learner")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Admin {
+public class Learner {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "admin_id")
+    @Column(name = "learner_id")
     private Long id;
 
     @Column(name = "username", nullable = false, unique = true)
@@ -29,6 +29,9 @@ public class Admin {
 
     @Column(name = "password", nullable = false)
     private String password;
+
+    @Column(name = "email", unique = true)
+    private String email;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

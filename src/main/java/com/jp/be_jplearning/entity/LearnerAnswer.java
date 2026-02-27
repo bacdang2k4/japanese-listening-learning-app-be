@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "learneranswer")
@@ -18,14 +19,17 @@ public class LearnerAnswer {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "result_id")
+    @JoinColumn(name = "result_id", nullable = false)
     private TestResult testResult;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "question_id")
+    @JoinColumn(name = "question_id", nullable = false)
     private Question question;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "selected_answer_id")
+    @JoinColumn(name = "selected_answer_id", nullable = false)
     private Answer selectedAnswer;
+
+    @Column(name = "created_at", updatable = false)
+    private LocalDateTime createdAt;
 }
