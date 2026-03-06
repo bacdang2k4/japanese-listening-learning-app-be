@@ -1,5 +1,5 @@
 package com.jp.be_jplearning.entity.enums;
 
-public enum TestResultStatusEnum {
+public enum AttemptStatusEnum {
     IN_PROGRESS, COMPLETED
 }

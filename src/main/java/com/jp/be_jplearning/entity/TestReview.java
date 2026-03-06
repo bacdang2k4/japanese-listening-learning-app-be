@@ -6,40 +6,38 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import com.jp.be_jplearning.entity.enums.GeneratedStatusEnum;
+import com.jp.be_jplearning.entity.enums.ReviewActionEnum;
 
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "generatedquestion")
+@Table(name = "testreview")
 @Getter
 @Setter
 @NoArgsConstructor
-public class GeneratedQuestion {
+public class TestReview {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "generated_id")
+    @Column(name = "review_id")
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_id", nullable = false)
     private AudioTest test;
 
-    @Column(name = "content", nullable = false, columnDefinition = "TEXT")
-    private String content;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "admin_id", nullable = false)
+    private Admin admin;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "status", columnDefinition = "generated_status_enum")
-    private GeneratedStatusEnum status = GeneratedStatusEnum.PENDING;
+    @Column(name = "action", columnDefinition = "review_action_enum")
+    private ReviewActionEnum action;
 
-    @Column(name = "ai_prompt", columnDefinition = "TEXT")
-    private String aiPrompt;
+    @Column(name = "comment", columnDefinition = "TEXT")
+    private String comment;
 
-    @Column(name = "ai_model")
-    private String aiModel;
-
-    @Column(name = "created_at")
+    @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 }

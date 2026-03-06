@@ -9,14 +9,14 @@ import org.hibernate.type.SqlTypes;
 import com.jp.be_jplearning.entity.enums.ProgressStatusEnum;
 
 @Entity
-@Table(name = "profile_topic")
+@Table(name = "profile_level")
 @Getter
 @Setter
 @NoArgsConstructor
-public class ProfileTopic {
+public class ProfileLevel {
 
     @EmbeddedId
-    private ProfileTopicId id;
+    private ProfileLevelId id;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
@@ -29,7 +29,7 @@ public class ProfileTopic {
     private Profile profile;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @MapsId("topicId")
-    @JoinColumn(name = "topic_id")
-    private Topic topic;
+    @MapsId("levelId")
+    @JoinColumn(name = "level_id")
+    private Level level;
 }

@@ -85,7 +85,6 @@ public class LevelServiceImpl implements LevelService {
         }
 
         level.setLevelName(request.getLevelName());
-        level.setUpdatedAt(LocalDateTime.now());
 
         Level updatedLevel = levelRepository.save(level);
         return mapToResponse(updatedLevel);

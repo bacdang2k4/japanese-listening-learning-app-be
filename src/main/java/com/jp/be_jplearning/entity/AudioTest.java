@@ -29,34 +29,32 @@ public class AudioTest {
     @JoinColumn(name = "topic_id", nullable = false)
     private Topic topic;
 
+    @Column(name = "transcript", columnDefinition = "TEXT")
+    private String transcript;
+
     @Column(name = "audio_url")
     private String audioUrl;
 
     @Column(name = "duration")
     private Integer duration;
 
+    @Column(name = "total_questions")
+    private Integer totalQuestions;
+
     @Column(name = "pass_condition")
     private Integer passCondition = 80;
-
-    @Column(name = "is_ai_generated")
-    private Boolean isAiGenerated = false;
-
-    @Column(name = "ai_prompt", columnDefinition = "TEXT")
-    private String aiPrompt;
-
-    @Column(name = "ai_model")
-    private String aiModel;
-
-    @Column(name = "ai_generated_at")
-    private LocalDateTime aiGeneratedAt;
-
-    @Column(name = "ai_version")
-    private Integer aiVersion = 1;
 
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "test_status_enum")
     private TestStatusEnum status = TestStatusEnum.DRAFT;
+
+    @Column(name = "is_ai_generated")
+    private Boolean isAiGenerated = false;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "created_by_admin_id")
+    private Admin createdByAdmin;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "answer")
@@ -28,6 +27,6 @@ public class Answer {
     @Column(name = "is_correct")
     private Boolean isCorrect = false;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
+    @Column(name = "answer_order")
+    private Integer answerOrder;
 }

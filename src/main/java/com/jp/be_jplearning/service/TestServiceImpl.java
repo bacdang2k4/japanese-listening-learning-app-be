@@ -28,6 +28,7 @@ public class TestServiceImpl implements TestService {
     private final TopicRepository topicRepository;
     private final ProfileRepository profileRepository;
     private final ProfileTopicRepository profileTopicRepository;
+    private final TestAttemptRepository testAttemptRepository;
     private final TestResultRepository testResultRepository;
     private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
@@ -78,19 +79,18 @@ public class TestServiceImpl implements TestService {
                     pt.setId(ptId);
                     pt.setProfile(profile);
                     pt.setTopic(test.getTopic());
-                    pt.setStatus(ProfileLevelStatusEnum.LEARNING);
+                    pt.setStatus(ProgressStatusEnum.LEARNING);
                     return profileTopicRepository.save(pt);
                 });
 
-        TestResult testResult = new TestResult();
-        testResult.setProfileTopic(profileTopic);
-        testResult.setTest(test);
-        testResult.setMode(TestModeEnum.valueOf(request.getMode().toUpperCase()));
-        testResult.setStatus(TestResultStatusEnum.IN_PROGRESS);
-        testResult.setStartedAt(LocalDateTime.now());
-        testResult.setCreatedAt(LocalDateTime.now());
+        TestAttempt attempt = new TestAttempt();
+        attempt.setProfile(profile);
+        attempt.setTest(test);
+        attempt.setMode(TestModeEnum.valueOf(request.getMode().toUpperCase()));
+        attempt.setStatus(AttemptStatusEnum.IN_PROGRESS);
+        attempt.setStartedAt(LocalDateTime.now());
 
-        TestResult saved = testResultRepository.save(testResult);
+        TestAttempt saved = testAttemptRepository.save(attempt);
 
         return StartTestResponse.builder()
                 .resultId(saved.getId())
@@ -105,23 +105,23 @@ public class TestServiceImpl implements TestService {
     @Override
     @Transactional
     public SubmitTestResponse submitTest(Long resultId, SubmitTestRequest request) {
-        TestResult testResult = testResultRepository.findById(resultId)
+        TestAttempt attempt = testAttemptRepository.findById(resultId)
                 .orElseThrow(
-                        () -> new BusinessException("Cannot submit before starting the test (TestResult not found)"));
+                        () -> new BusinessException("Cannot submit before starting the test (TestAttempt not found)"));
 
-        if (!testResult.getProfileTopic().getProfile().getId().equals(request.getProfileId())) {
+        if (!attempt.getProfile().getId().equals(request.getProfileId())) {
             throw new BusinessException("Cannot submit the result of another user");
         }
 
-        if (testResult.getStatus() == TestResultStatusEnum.COMPLETED) {
+        if (attempt.getStatus() == AttemptStatusEnum.COMPLETED) {
             throw new BusinessException("Test is already completed");
         }
 
-        if (testResult.getStatus() != TestResultStatusEnum.IN_PROGRESS) {
+        if (attempt.getStatus() != AttemptStatusEnum.IN_PROGRESS) {
             throw new BusinessException("Test is not in progress");
         }
 
-        List<Question> questions = questionRepository.findByTestId(testResult.getTest().getId());
+        List<Question> questions = questionRepository.findByTestId(attempt.getTest().getId());
         Map<Long, Question> questionMap = questions.stream().collect(Collectors.toMap(Question::getId, q -> q));
 
         int correctCount = 0;
@@ -130,10 +130,10 @@ public class TestServiceImpl implements TestService {
         for (LearnerAnswerRequest ansReq : request.getAnswers()) {
             Question question = questionMap.get(ansReq.getQuestionId());
             if (question == null)
-                continue; // Skip invalid question
+                continue;
 
             LearnerAnswer learnerAnswer = new LearnerAnswer();
-            learnerAnswer.setTestResult(testResult);
+            learnerAnswer.setAttempt(attempt);
             learnerAnswer.setQuestion(question);
 
             if (ansReq.getSelectedAnswerId() != null) {
@@ -150,26 +150,32 @@ public class TestServiceImpl implements TestService {
         }
 
         int score = totalQuestions == 0 ? 0 : (int) Math.round(((double) correctCount / totalQuestions) * 100);
-        boolean isPassed = score >= (testResult.getTest().getPassCondition() == null ? 80
-                : testResult.getTest().getPassCondition());
+        boolean isPassed = score >= (attempt.getTest().getPassCondition() == null ? 80
+                : attempt.getTest().getPassCondition());
 
-        int calculatedTotalTime = testResult.getStartedAt() != null
-                ? (int) Duration.between(testResult.getStartedAt(), LocalDateTime.now()).getSeconds()
+        int calculatedTotalTime = attempt.getStartedAt() != null
+                ? (int) Duration.between(attempt.getStartedAt(), LocalDateTime.now()).getSeconds()
                 : 0;
 
-        testResult.setTotalTime(calculatedTotalTime);
-        testResult.setScore(score);
-        testResult.setIsPassed(isPassed);
-        testResult.setStatus(TestResultStatusEnum.COMPLETED);
-        testResult.setCompletedAt(LocalDateTime.now());
+        attempt.setStatus(AttemptStatusEnum.COMPLETED);
+        attempt.setCompletedAt(LocalDateTime.now());
+        testAttemptRepository.save(attempt);
 
-        testResultRepository.save(testResult);
+        TestResult testResult = new TestResult();
+        testResult.setAttempt(attempt);
+        testResult.setScore(score);
+        testResult.setCorrectAnswers(correctCount);
+        testResult.setIsPassed(isPassed);
+        testResult.setTotalTime(calculatedTotalTime);
+        testResult.setCreatedAt(LocalDateTime.now());
+
+        TestResult savedResult = testResultRepository.save(testResult);
 
         return SubmitTestResponse.builder()
-                .resultId(testResult.getId())
+                .resultId(savedResult.getId())
                 .score(score)
                 .isPassed(isPassed)
-                .status(testResult.getStatus().name())
+                .status(attempt.getStatus().name())
                 .build();
     }
 
@@ -179,18 +185,16 @@ public class TestServiceImpl implements TestService {
         TestResult testResult = testResultRepository.findById(resultId)
                 .orElseThrow(() -> new ResourceNotFoundException("TestResult not found"));
 
-        if (!testResult.getProfileTopic().getProfile().getId().equals(profileId)) {
+        if (!testResult.getAttempt().getProfile().getId().equals(profileId)) {
             throw new BusinessException("Cannot access the result of another user");
         }
 
-        List<LearnerAnswer> learnerAnswers = learnerAnswerRepository.findByTestResultId(resultId);
+        List<LearnerAnswer> learnerAnswers = learnerAnswerRepository.findByAttemptId(testResult.getAttempt().getId());
 
         List<QuestionResultResponse> questionResults = learnerAnswers.stream().map(la -> {
             Question q = la.getQuestion();
             Answer selected = la.getSelectedAnswer();
 
-            // Find correct answer for this question directly without extra query if mapped
-            // or we could fetch it
             Answer correct = q.getTest() == null ? null
                     : answerRepository.findAll().stream()
                             .filter(a -> a.getQuestion().getId().equals(q.getId())
@@ -208,7 +212,7 @@ public class TestServiceImpl implements TestService {
 
         return TestResultDetailResponse.builder()
                 .resultId(testResult.getId())
-                .testName(testResult.getTest().getTestName())
+                .testName(testResult.getAttempt().getTest().getTestName())
                 .score(testResult.getScore())
                 .isPassed(testResult.getIsPassed())
                 .totalTime(testResult.getTotalTime())
@@ -223,12 +227,12 @@ public class TestServiceImpl implements TestService {
             throw new BusinessException("Maximum page size is 50");
 
         Pageable pageable = PageRequest.of(page, size);
-        Page<TestResult> resultPage = testResultRepository.findByProfileTopic_Id_ProfileId(profileId, pageable);
+        Page<TestResult> resultPage = testResultRepository.findByAttempt_Profile_Id(profileId, pageable);
 
         List<TestHistoryResponse> content = resultPage.getContent().stream().map(tr -> TestHistoryResponse.builder()
                 .resultId(tr.getId())
-                .testName(tr.getTest().getTestName())
-                .mode(tr.getMode().name())
+                .testName(tr.getAttempt().getTest().getTestName())
+                .mode(tr.getAttempt().getMode().name())
                 .score(tr.getScore())
                 .isPassed(tr.getIsPassed())
                 .createdAt(tr.getCreatedAt())

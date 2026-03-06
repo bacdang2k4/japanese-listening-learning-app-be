@@ -6,5 +6,5 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface TestResultRepository extends JpaRepository<TestResult, Long> {
-    Page<TestResult> findByProfileTopic_Id_ProfileId(Long profileId, Pageable pageable);
+    Page<TestResult> findByAttempt_Profile_Id(Long profileId, Pageable pageable);
 }

@@ -19,8 +19,8 @@ public class LearnerAnswer {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "result_id", nullable = false)
-    private TestResult testResult;
+    @JoinColumn(name = "attempt_id", nullable = false)
+    private TestAttempt attempt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "question_id", nullable = false)

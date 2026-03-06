@@ -7,23 +7,26 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "topic")
+@Table(name = "vocabulary")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Topic {
+public class Vocabulary {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "topic_id")
+    @Column(name = "vocab_id")
     private Long id;
 
-    @Column(name = "topic_name", nullable = false)
-    private String topicName;
+    @Column(name = "word", nullable = false)
+    private String word;
+
+    @Column(name = "meaning", columnDefinition = "TEXT")
+    private String meaning;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "level_id", nullable = false)
-    private Level level;
+    @JoinColumn(name = "topic_id", nullable = false)
+    private Topic topic;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
