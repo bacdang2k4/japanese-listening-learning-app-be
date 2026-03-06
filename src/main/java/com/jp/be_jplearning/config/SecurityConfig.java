@@ -60,8 +60,8 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/swagger-ui.html")
                         .permitAll()
-                        .requestMatchers("/api/levels/**", "/api/topics/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/learner/**").hasRole("LEARNER")
                         .requestMatchers("/api/tests/**", "/api/test-results/**", "/api/profiles/**")
                         .hasRole("LEARNER")
                         .anyRequest().authenticated())

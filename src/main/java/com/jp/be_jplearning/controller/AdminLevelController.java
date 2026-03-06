@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.jp.be_jplearning.common.PaginationResponse;
 
 @RestController
 @RequestMapping("/api/admin/levels")
@@ -18,6 +19,30 @@ import org.springframework.web.bind.annotation.*;
 public class AdminLevelController {
 
     private final LevelService levelService;
+
+    @GetMapping
+    @Operation(summary = "Get all levels")
+    public ResponseEntity<ApiResponse<PaginationResponse<LevelResponse>>> getAllLevels(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        PaginationResponse<LevelResponse> response = levelService.getAllLevels(page, size);
+        return ResponseEntity.ok(ApiResponse.<PaginationResponse<LevelResponse>>builder()
+                .success(true)
+                .message("Levels retrieved successfully")
+                .data(response)
+                .build());
+    }
+
+    @GetMapping("/{levelId}")
+    @Operation(summary = "Get level by ID")
+    public ResponseEntity<ApiResponse<LevelResponse>> getLevelById(@PathVariable Long levelId) {
+        LevelResponse response = levelService.getLevelById(levelId);
+        return ResponseEntity.ok(ApiResponse.<LevelResponse>builder()
+                .success(true)
+                .message("Level retrieved successfully")
+                .data(response)
+                .build());
+    }
 
     @PostMapping
     @Operation(summary = "Create a new level")
