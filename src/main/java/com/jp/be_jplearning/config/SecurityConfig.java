@@ -60,11 +60,9 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/swagger-ui.html")
                         .permitAll()
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/levels/**")
-                        .hasAnyRole("ADMIN", "LEARNER")
-                        .requestMatchers("/api/admin/levels/**").hasRole("ADMIN")
+                        .requestMatchers("/api/levels/**", "/api/topics/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/tests/**", "/api/test-results/**", "/api/profiles/**", "/api/topics/**")
+                        .requestMatchers("/api/tests/**", "/api/test-results/**", "/api/profiles/**")
                         .hasRole("LEARNER")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex
