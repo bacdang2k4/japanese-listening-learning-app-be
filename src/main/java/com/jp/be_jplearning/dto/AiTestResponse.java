@@ -12,5 +12,6 @@ public class AiTestResponse {
     private String transcript;
     private Long topicId;
     private String status;
+    private String audioUrl;
     private List<QuestionResponse> questions;
 }

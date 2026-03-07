@@ -15,6 +15,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -37,6 +39,7 @@ public class AiTestServiceImpl implements AiTestService {
 
     private final AiClient aiClient;
     private final ObjectMapper objectMapper;
+    private final AiAudioGenerationProcessor audioGenerationProcessor;
 
     @Override
     @Transactional(noRollbackFor = com.jp.be_jplearning.common.BusinessException.class)
@@ -51,7 +54,7 @@ public class AiTestServiceImpl implements AiTestService {
         test.setTopic(topic);
         test.setDuration(request.getDuration());
         test.setTotalQuestions(request.getQuestionCount());
-        test.setStatus(TestStatusEnum.AI_GENERATED);
+        test.setStatus(TestStatusEnum.AI_GENERATED); // Keep as AI_GENERATED while audio creates
         test.setIsAiGenerated(true);
         test.setCreatedByAdmin(currentAdmin);
         test.setCreatedAt(LocalDateTime.now());
@@ -73,19 +76,35 @@ public class AiTestServiceImpl implements AiTestService {
             // Parse response
             Map<String, Object> aiMap = objectMapper.readValue(rawJson, new TypeReference<Map<String, Object>>() {
             });
-            String transcript = (String) aiMap.get("transcript");
-            if (transcript != null) {
-                transcript = transcript.replace("\n", " ").replace("\\n", " ").replaceAll("\\s+", " ").trim();
+            String rawTranscript = (String) aiMap.get("transcript");
+            String processedTranscript = rawTranscript;
+            if (processedTranscript != null) {
+                processedTranscript = processedTranscript.replace("\n", " ").replace("\\n", " ").replaceAll("\\s+", " ")
+                        .trim();
             }
+            final String transcript = processedTranscript;
 
             test.setTranscript(transcript);
-            test.setStatus(TestStatusEnum.PENDING_REVIEW);
             audioTestRepository.save(test);
 
             List<Map<String, Object>> questionsMap = (List<Map<String, Object>>) aiMap.get("questions");
             saveQuestionsAndAnswers(test, questionsMap);
 
             logEntry.setStatus(GenerationStatusEnum.SUCCESS);
+            AIGenerationLog savedLog = aiGenerationLogRepository.save(logEntry);
+
+            Long finalTestId = test.getId();
+            Long finalLogId = savedLog.getId();
+
+            // Trigger Async Audio Generation AFTER the transaction is successfully
+            // committed to DB
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    audioGenerationProcessor.generateAudioAndUpload(finalTestId, transcript, finalLogId);
+                }
+            });
+
         } catch (Exception e) {
             log.error("Failed AI Test Generation", e);
             logEntry.setStatus(GenerationStatusEnum.FAILED);
@@ -107,8 +126,6 @@ public class AiTestServiceImpl implements AiTestService {
             throw new com.jp.be_jplearning.common.BusinessException(
                     "AI Generation failed. Check logs for details: " + e.getMessage());
         }
-
-        aiGenerationLogRepository.save(logEntry);
 
         return getGeneratedTest(test.getId());
     }
@@ -143,6 +160,7 @@ public class AiTestServiceImpl implements AiTestService {
                 .transcript(test.getTranscript())
                 .topicId(test.getTopic().getId())
                 .status(test.getStatus().name())
+                .audioUrl(test.getAudioUrl())
                 .questions(questionResponses)
                 .build();
     }
