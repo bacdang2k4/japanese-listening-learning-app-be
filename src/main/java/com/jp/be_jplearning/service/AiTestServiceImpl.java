@@ -74,6 +74,9 @@ public class AiTestServiceImpl implements AiTestService {
             Map<String, Object> aiMap = objectMapper.readValue(rawJson, new TypeReference<Map<String, Object>>() {
             });
             String transcript = (String) aiMap.get("transcript");
+            if (transcript != null) {
+                transcript = transcript.replace("\n", " ").replace("\\n", " ").replaceAll("\\s+", " ").trim();
+            }
 
             test.setTranscript(transcript);
             test.setStatus(TestStatusEnum.PENDING_REVIEW);
@@ -211,32 +214,75 @@ public class AiTestServiceImpl implements AiTestService {
     }
 
     private String buildPrompt(AiGenerateRequest req, Topic topic) {
+        String promptTemplate = """
+                Generate a Japanese listening test about the topic: "%s".
+                JLPT Level: N%d
+                Difficulty: %s
+                Number of questions: %d
+                Audio duration target: about %d minutes.
+
+                The listening transcript must be a short natural conversation between two speakers.
+
+                You MUST output exactly ONE JSON object matching the schema below.
+                Output NOTHING ELSE.
+                Do NOT include markdown blocks, explanations, or additional text.
+
+                SCHEMA:
+
+                {
+                  "transcript": "<speak>...</speak>",
+                  "questions": [
+                    {
+                      "content": "...",
+                      "answers": [
+                        { "content": "...", "isCorrect": true },
+                        { "content": "...", "isCorrect": false },
+                        { "content": "...", "isCorrect": false },
+                        { "content": "...", "isCorrect": false }
+                      ]
+                    }
+                  ]
+                }
+
+                TRANSCRIPT REQUIREMENTS (VERY IMPORTANT):
+
+                The "transcript" must be valid AWS Polly SSML.
+
+                Use the following structure:
+
+                - Wrap everything inside <speak>
+                - Use <prosody> to control speed and pitch
+                - Use <break time="..."/> pauses between sentences
+                - Use simple natural Japanese conversation suitable for JLPT N%d learners
+                - The conversation must sound like two people greeting or talking naturally
+
+                Example structure to follow:
+
+                <speak><prosody rate="slow" pitch="low">おはようございます。日本語のリスニングテストへようこそ。</prosody><break time="1s"/>今から、短い会話を聞いてください。</speak><break time="0.5s"/><prosody rate="medium">女：おはようございます。</prosody><break time="0.6s"/><prosody rate="medium">男：おはようございます。元気ですか。</prosody><break time="0.6s"/><prosody rate="medium">女：はい、元気です。今日はいい天気ですね。</prosody><break time="0.6s"/><prosody rate="medium">男：そうですね。では、また明日。</prosody><break time="1s"/><prosody rate="fast" pitch="high">では、質問に答えてください。</prosody><break time="1s"/>今日は <say-as interpret-as="date">2026/03/07</say-as> です。<break time="0.5s"/>ここは <sub alias="Tokyo">東京</sub> です。</speak><break time="1s"/><break time="1s"/></speak>
+
+                IMPORTANT RULES:
+
+                1. Produce exactly %d questions in the "questions" array.
+                2. Each question must have exactly 4 answers.
+                3. Exactly ONE answer must have "isCorrect": true.
+                4. Questions must be based on the transcript.
+                5. The transcript must be a conversation (not narration).
+                6. The transcript must be returned as a SINGLE LINE string.
+                7. Do NOT include newline characters like \\n inside the transcript.
+                8. Do NOT wrap JSON in markdown.
+                9. The final output must be valid JSON.
+                """;
+
+        Long levelId = topic.getLevel() != null ? topic.getLevel().getId() : 5L;
+
         return String.format(
-                "Generate a Japanese listening test about the topic: '%s'. Level: %d. " +
-                        "Difficulty: %s. Number of questions: %d. Audio duration context: ~%d minutes.\n\n" +
-                        "You MUST output exactly ONE JSON object matching this schema. Output NOTHING ELSE. No markdown blocks, no conversational text.\n\n"
-                        +
-                        "{\n" +
-                        "  \"transcript\": \"[Write a cohesive Japanese conversation/monologue transcript appropriate for the topic and level]\",\n"
-                        +
-                        "  \"questions\": [\n" +
-                        "    {\n" +
-                        "      \"content\": \"[Question 1 based on the transcript, in Japanese or English depending on level]\",\n"
-                        +
-                        "      \"answers\": [\n" +
-                        "        { \"content\": \"[Answer option A]\", \"isCorrect\": true },\n" +
-                        "        { \"content\": \"[Answer option B]\", \"isCorrect\": false },\n" +
-                        "        { \"content\": \"[Answer option C]\", \"isCorrect\": false },\n" +
-                        "        { \"content\": \"[Answer option D]\", \"isCorrect\": false }\n" +
-                        "      ]\n" +
-                        "    }\n" +
-                        "  ]\n" +
-                        "}\n\n" +
-                        "RULES:\n" +
-                        "1. Produce exactly %d questions in the \"questions\" JSON array.\n" +
-                        "2. Each question MUST have exactly 4 answers.\n" +
-                        "3. Exactly ONE answer per question must have isCorrect set to true.",
-                topic.getTopicName(), topic.getLevel().getId(), req.getDifficulty(), req.getQuestionCount(),
-                req.getDuration(), req.getQuestionCount());
+                promptTemplate,
+                topic.getTopicName(),
+                levelId,
+                req.getDifficulty(),
+                req.getQuestionCount(),
+                req.getDuration(),
+                levelId,
+                req.getQuestionCount());
     }
 }
