@@ -21,12 +21,17 @@ public class Vocabulary {
     @Column(name = "word", nullable = false)
     private String word;
 
+    @Column(name = "kana")
+    private String kana;
+
+    @Column(name = "romaji")
+    private String romaji;
+
     @Column(name = "meaning", columnDefinition = "TEXT")
     private String meaning;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "topic_id", nullable = false)
-    private Topic topic;
+    @Column(name = "example_sentence", columnDefinition = "TEXT")
+    private String exampleSentence;
 
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
