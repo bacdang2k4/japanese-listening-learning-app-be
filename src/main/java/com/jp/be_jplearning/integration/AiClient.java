@@ -25,11 +25,13 @@ public class AiClient {
     private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
-    @Value("${gemini.api.key}")
+    @Value("${ai.api.key}")
     private String geminiApiKey;
-
+    @Value("${ai.model}")
+    private String aiModel;
+    
     public String generateListeningTest(String prompt) {
-        String url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="
+        String url = "https://generativelanguage.googleapis.com/v1beta/models/" + aiModel + ":generateContent?key="
                 + geminiApiKey;
 
         try {

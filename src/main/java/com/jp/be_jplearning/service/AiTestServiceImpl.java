@@ -13,6 +13,7 @@ import com.jp.be_jplearning.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -41,6 +42,9 @@ public class AiTestServiceImpl implements AiTestService {
     private final ObjectMapper objectMapper;
     private final AiAudioGenerationProcessor audioGenerationProcessor;
 
+    @Value("${ai.model}")
+    private String aiModel;
+
     @Override
     @Transactional(noRollbackFor = com.jp.be_jplearning.common.BusinessException.class)
     public AiTestResponse generateTest(AiGenerateRequest request) {
@@ -66,7 +70,7 @@ public class AiTestServiceImpl implements AiTestService {
         AIGenerationLog logEntry = new AIGenerationLog();
         logEntry.setTest(test);
         logEntry.setPrompt(prompt);
-        logEntry.setModel("DEFAULT_MOCK_MODEL");
+        logEntry.setModel(aiModel);
         logEntry.setGeneratedAt(LocalDateTime.now());
 
         try {
