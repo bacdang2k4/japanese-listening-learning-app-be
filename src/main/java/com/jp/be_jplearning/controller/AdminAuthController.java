@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/admin/auth")
+@RequestMapping("/api/v1/admin/auth")
 @RequiredArgsConstructor
 @Tag(name = "Admin Authentication", description = "Endpoints for Admin login")
 public class AdminAuthController {

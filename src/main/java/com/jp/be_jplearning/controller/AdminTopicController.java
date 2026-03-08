@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import com.jp.be_jplearning.common.PaginationResponse;
 
 @RestController
-@RequestMapping("/api/admin/topics")
+@RequestMapping("/api/v1/admin/topics")
 @RequiredArgsConstructor
 @Tag(name = "Topic Admin APIs", description = "Endpoints for managing topics by admins")
 public class AdminTopicController {

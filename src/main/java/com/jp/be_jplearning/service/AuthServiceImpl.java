@@ -44,6 +44,8 @@ public class AuthServiceImpl implements AuthService {
         Learner learner = new Learner();
         learner.setUsername(request.getUsername());
         learner.setEmail(request.getEmail());
+        learner.setFirstName(request.getFirstName());
+        learner.setLastName(request.getLastName());
         learner.setPassword(passwordEncoder.encode(request.getPassword()));
         learner.setCreatedAt(LocalDateTime.now());
 
@@ -58,6 +60,9 @@ public class AuthServiceImpl implements AuthService {
                 .learnerId(savedLearner.getId())
                 .username(savedLearner.getUsername())
                 .email(savedLearner.getEmail())
+                .firstName(savedLearner.getFirstName())
+                .lastName(savedLearner.getLastName())
+                .avatarUrl(savedLearner.getAvatarUrl())
                 .build();
     }
 
@@ -87,6 +92,9 @@ public class AuthServiceImpl implements AuthService {
                 .profileId(profile.getId())
                 .username(learner.getUsername())
                 .role("ROLE_LEARNER")
+                .firstName(learner.getFirstName())
+                .lastName(learner.getLastName())
+                .avatarUrl(learner.getAvatarUrl())
                 .build();
     }
 

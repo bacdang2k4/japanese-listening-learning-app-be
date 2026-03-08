@@ -13,7 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/admin/ai-tests")
+@RequestMapping("/api/v1/admin/ai-tests")
 @RequiredArgsConstructor
 @Tag(name = "AI Test Management Admin APIs", description = "Endpoints for generating and publishing AI-driven audio tests")
 public class AdminAiTestController {

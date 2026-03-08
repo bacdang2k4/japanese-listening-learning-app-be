@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/admin/questions")
+@RequestMapping("/api/v1/admin/questions")
 @RequiredArgsConstructor
 @Tag(name = "Question Admin APIs", description = "Endpoints for managing questions by admins")
 public class AdminQuestionController {

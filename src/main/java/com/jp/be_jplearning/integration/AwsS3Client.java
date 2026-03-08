@@ -45,4 +45,43 @@ public class AwsS3Client {
             throw new RuntimeException("S3 Upload Error: " + e.getMessage(), e);
         }
     }
+
+    public String uploadImageBytes(String fileName, byte[] imageBytes, String contentType) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key("avatars/" + fileName)
+                    .contentType(contentType)
+                    .build();
+
+            log.info("Uploading image {} to bucket {}", fileName, bucketName);
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(imageBytes));
+
+            String url = String.format("https://%s.s3.%s.amazonaws.com/avatars/%s", bucketName, region, fileName);
+            log.info("Successfully uploaded image to S3: {}", url);
+            return url;
+
+        } catch (S3Exception e) {
+            log.error("Failed to upload image to S3", e);
+            throw new RuntimeException("S3 Upload Error: " + e.getMessage(), e);
+        }
+    }
+
+    public void deleteImage(String fileName) {
+        try {
+            software.amazon.awssdk.services.s3.model.DeleteObjectRequest deleteObjectRequest = software.amazon.awssdk.services.s3.model.DeleteObjectRequest
+                    .builder()
+                    .bucket(bucketName)
+                    .key("avatars/" + fileName)
+                    .build();
+
+            log.info("Deleting image {} from bucket {}", fileName, bucketName);
+            s3Client.deleteObject(deleteObjectRequest);
+            log.info("Successfully deleted image from S3: {}", fileName);
+
+        } catch (S3Exception e) {
+            log.error("Failed to delete image from S3", e);
+            throw new RuntimeException("S3 Delete Error: " + e.getMessage(), e);
+        }
+    }
 }

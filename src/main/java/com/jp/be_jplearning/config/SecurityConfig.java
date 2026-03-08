@@ -45,8 +45,8 @@ public class SecurityConfig {
                 }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/api/auth/**",
-                                "/api/admin/auth/**",
+                                "/api/v1/auth/**",
+                                "/api/v1/admin/auth/**",
                                 "/v2/api-docs",
                                 "/v3/api-docs",
                                 "/v3/api-docs/**",
@@ -60,9 +60,9 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/swagger-ui.html")
                         .permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/learner/**").hasRole("LEARNER")
-                        .requestMatchers("/api/tests/**", "/api/test-results/**", "/api/profiles/**")
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/learner/**").hasRole("LEARNER")
+                        .requestMatchers("/api/v1/tests/**", "/api/v1/test-results/**", "/api/v1/profiles/**")
                         .hasRole("LEARNER")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

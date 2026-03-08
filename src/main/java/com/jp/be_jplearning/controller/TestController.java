@@ -12,7 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api")
+@RequestMapping("/api/v1")
 @Tag(name = "Test Flow", description = "Endpoints for test flow and execution")
 @RequiredArgsConstructor
 public class TestController {

@@ -12,4 +12,7 @@ public class LearnerAuthResponse {
     private Long profileId;
     private String username;
     private String role;
+    private String firstName;
+    private String lastName;
+    private String avatarUrl;
 }

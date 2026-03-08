@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import com.jp.be_jplearning.common.PaginationResponse;
 
 @RestController
-@RequestMapping("/api/admin/levels")
+@RequestMapping("/api/v1/admin/levels")
 @RequiredArgsConstructor
 @Tag(name = "Level Admin APIs", description = "Endpoints for managing levels by admins")
 public class AdminLevelController {

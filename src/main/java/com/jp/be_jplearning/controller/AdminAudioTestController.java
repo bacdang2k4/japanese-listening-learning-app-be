@@ -14,7 +14,7 @@ import com.jp.be_jplearning.common.PaginationResponse;
 import com.jp.be_jplearning.entity.enums.TestStatusEnum;
 
 @RestController
-@RequestMapping("/api/admin/audio-tests")
+@RequestMapping("/api/v1/admin/audio-tests")
 @RequiredArgsConstructor
 @Tag(name = "Audio Test Admin APIs", description = "Endpoints for managing audio tests by admins")
 public class AdminAudioTestController {
