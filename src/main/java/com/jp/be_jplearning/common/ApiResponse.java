@@ -1,8 +1,10 @@
 package com.jp.be_jplearning.common;
 
-import java.time.Instant;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Builder;
 import lombok.Data;
+
+import java.time.LocalDateTime;
 
 @Data
 @Builder
@@ -11,5 +13,6 @@ public class ApiResponse<T> {
     private String message;
     private T data;
     @Builder.Default
-    private String timestamp = Instant.now().toString();
+    @JsonFormat(pattern = "dd/MM/yyyy HH:mm:ss")
+    private LocalDateTime timestamp = LocalDateTime.now();
 }

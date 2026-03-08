@@ -12,6 +12,7 @@ import com.jp.be_jplearning.security.CustomUserDetails;
 import com.jp.be_jplearning.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -35,10 +36,10 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     public RegisterResponse registerLearner(RegisterRequest request) {
         if (learnerRepository.existsByUsername(request.getUsername())) {
-            throw new BusinessException("Username already exists");
+            throw new BusinessException("Tên đăng nhập '" + request.getUsername() + "' đã tồn tại");
         }
         if (learnerRepository.existsByEmail(request.getEmail())) {
-            throw new BusinessException("Email already exists");
+            throw new BusinessException("Email '" + request.getEmail() + "' đã được sử dụng");
         }
 
         Learner learner = new Learner();
@@ -69,58 +70,81 @@ public class AuthServiceImpl implements AuthService {
     @Override
     @Transactional(readOnly = true)
     public LearnerAuthResponse loginLearner(LoginRequest request) {
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+        // Check if username exists first
+        Learner learner = learnerRepository.findByUsername(request.getUsername())
+                .orElseThrow(() -> new BusinessException("Tài khoản '" + request.getUsername() + "' không tồn tại"));
 
-        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
-        Learner learner = learnerRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException("Learner not found"));
+        // Check if this is a learner (not admin)
+        try {
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
-        if (userDetails.getAuthorities().stream().noneMatch(a -> a.getAuthority().equals("ROLE_LEARNER"))) {
-            throw new BusinessException("Not found as learner");
+            CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
+            if (userDetails.getAuthorities().stream().noneMatch(a -> a.getAuthority().equals("ROLE_LEARNER"))) {
+                throw new BusinessException("Tài khoản này không phải là tài khoản học viên");
+            }
+
+            Profile profile = profileRepository.findByLearnerId(learner.getId()).stream().findFirst()
+                    .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ cho tài khoản này"));
+
+            String token = jwtUtil.generateToken(userDetails, learner.getId(), "ROLE_LEARNER");
+
+            return LearnerAuthResponse.builder()
+                    .accessToken(token)
+                    .tokenType("Bearer")
+                    .learnerId(learner.getId())
+                    .profileId(profile.getId())
+                    .username(learner.getUsername())
+                    .role("ROLE_LEARNER")
+                    .firstName(learner.getFirstName())
+                    .lastName(learner.getLastName())
+                    .avatarUrl(learner.getAvatarUrl())
+                    .build();
+
+        } catch (BadCredentialsException e) {
+            throw new BusinessException("Mật khẩu không đúng");
+        } catch (BusinessException e) {
+            throw e; // Re-throw our own exceptions
+        } catch (Exception e) {
+            throw new BusinessException("Đăng nhập thất bại: " + e.getMessage());
         }
-
-        Profile profile = profileRepository.findByLearnerId(learner.getId()).stream().findFirst()
-                .orElseThrow(() -> new BusinessException("Profile not found for learner"));
-
-        String token = jwtUtil.generateToken(userDetails, learner.getId(), "ROLE_LEARNER");
-
-        return LearnerAuthResponse.builder()
-                .accessToken(token)
-                .tokenType("Bearer")
-                .learnerId(learner.getId())
-                .profileId(profile.getId())
-                .username(learner.getUsername())
-                .role("ROLE_LEARNER")
-                .firstName(learner.getFirstName())
-                .lastName(learner.getLastName())
-                .avatarUrl(learner.getAvatarUrl())
-                .build();
     }
 
     @Override
     @Transactional(readOnly = true)
     public AdminAuthResponse loginAdmin(LoginRequest request) {
-        Authentication auth = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
+        // Check if admin username exists first
+        Admin admin = adminRepository.findByUsername(request.getUsername())
+                .orElseThrow(
+                        () -> new BusinessException("Tài khoản admin '" + request.getUsername() + "' không tồn tại"));
 
-        CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+        try {
+            Authentication auth = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
 
-        if (userDetails.getAuthorities().stream().noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
-            throw new BusinessException("Not found as admin");
+            CustomUserDetails userDetails = (CustomUserDetails) auth.getPrincipal();
+
+            if (userDetails.getAuthorities().stream().noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                throw new BusinessException("Tài khoản này không có quyền quản trị viên");
+            }
+
+            String token = jwtUtil.generateToken(userDetails, admin.getId(), "ROLE_ADMIN");
+
+            return AdminAuthResponse.builder()
+                    .accessToken(token)
+                    .tokenType("Bearer")
+                    .adminId(admin.getId())
+                    .username(admin.getUsername())
+                    .role("ROLE_ADMIN")
+                    .build();
+
+        } catch (BadCredentialsException e) {
+            throw new BusinessException("Mật khẩu admin không đúng");
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException("Đăng nhập admin thất bại: " + e.getMessage());
         }
-
-        Admin admin = adminRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new BusinessException("Admin not found"));
-
-        String token = jwtUtil.generateToken(userDetails, admin.getId(), "ROLE_ADMIN");
-
-        return AdminAuthResponse.builder()
-                .accessToken(token)
-                .tokenType("Bearer")
-                .adminId(admin.getId())
-                .username(admin.getUsername())
-                .role("ROLE_ADMIN")
-                .build();
     }
 }
