@@ -31,6 +31,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final UserDetailsService userDetailsService;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -70,7 +71,7 @@ public class SecurityConfig {
                             response.setContentType("application/json;charset=UTF-8");
                             response.setStatus(401);
                             response.getWriter()
-                                    .write(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+                                    .write(objectMapper.writeValueAsString(
                                             com.jp.be_jplearning.common.ApiResponse.<Void>builder()
                                                     .success(false)
                                                     .message("Unauthorized: Invalid or missing JWT")
@@ -80,7 +81,7 @@ public class SecurityConfig {
                             response.setContentType("application/json;charset=UTF-8");
                             response.setStatus(403);
                             response.getWriter()
-                                    .write(new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(
+                                    .write(objectMapper.writeValueAsString(
                                             com.jp.be_jplearning.common.ApiResponse.<Void>builder()
                                                     .success(false)
                                                     .message("Forbidden: Insufficient privileges")
