@@ -63,7 +63,8 @@ public class SecurityConfig {
                         .permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/learner/**").hasRole("LEARNER")
-                        .requestMatchers("/api/v1/tests/**", "/api/v1/test-results/**", "/api/v1/profiles/**")
+                        .requestMatchers("/api/v1/levels/**", "/api/v1/topics/**",
+                                "/api/v1/tests/**", "/api/v1/test-results/**", "/api/v1/profiles/**")
                         .hasRole("LEARNER")
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

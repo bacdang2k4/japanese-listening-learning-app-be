@@ -1,16 +1,24 @@
 package com.jp.be_jplearning.controller;
 
 import com.jp.be_jplearning.common.ApiResponse;
+import com.jp.be_jplearning.common.PaginationResponse;
 import com.jp.be_jplearning.dto.AiGenerateRequest;
+import com.jp.be_jplearning.dto.AiGenerationLogResponse;
 import com.jp.be_jplearning.dto.AiRejectRequest;
 import com.jp.be_jplearning.dto.AiTestResponse;
+import com.jp.be_jplearning.entity.AIGenerationLog;
+import com.jp.be_jplearning.repository.AIGenerationLogRepository;
 import com.jp.be_jplearning.service.AiTestService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/admin/ai-tests")
@@ -19,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class AdminAiTestController {
 
     private final AiTestService aiTestService;
+    private final AIGenerationLogRepository aiGenerationLogRepository;
 
     @PostMapping("/generate")
     @Operation(summary = "Generate a new AI audio test")
@@ -64,6 +73,37 @@ public class AdminAiTestController {
                 .success(true)
                 .message("AI test rejected successfully")
                 .data(null)
+                .build());
+    }
+
+    @GetMapping("/logs")
+    @Operation(summary = "Get recent AI generation logs")
+    public ResponseEntity<ApiResponse<PaginationResponse<AiGenerationLogResponse>>> getGenerationLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Page<AIGenerationLog> logPage = aiGenerationLogRepository
+                .findAllByOrderByGeneratedAtDesc(PageRequest.of(page, size));
+
+        List<AiGenerationLogResponse> content = logPage.getContent().stream()
+                .map(log -> AiGenerationLogResponse.builder()
+                        .id(log.getId())
+                        .testId(log.getTest() != null ? log.getTest().getId() : null)
+                        .testName(log.getTest() != null ? log.getTest().getTestName() : null)
+                        .model(log.getModel())
+                        .status(log.getStatus() != null ? log.getStatus().name() : null)
+                        .generatedAt(log.getGeneratedAt())
+                        .build())
+                .toList();
+
+        PaginationResponse<AiGenerationLogResponse> response = new PaginationResponse<>(
+                content, logPage.getNumber(), logPage.getSize(),
+                logPage.getTotalElements(), logPage.getTotalPages(), logPage.isLast());
+
+        return ResponseEntity.ok(ApiResponse.<PaginationResponse<AiGenerationLogResponse>>builder()
+                .success(true)
+                .message("AI generation logs retrieved successfully")
+                .data(response)
                 .build());
     }
 }

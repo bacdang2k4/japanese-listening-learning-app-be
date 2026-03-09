@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1")
 @Tag(name = "Test Flow", description = "Endpoints for test flow and execution")
@@ -44,6 +46,20 @@ public class TestController {
                 return ResponseEntity.ok(ApiResponse.<StartTestResponse>builder()
                                 .success(true)
                                 .message("Test started successfully")
+                                .data(response)
+                                .build());
+        }
+
+        @GetMapping("/tests/{testId}/questions")
+        @Operation(summary = "Get Test Questions (requires active attempt)")
+        public ResponseEntity<ApiResponse<List<LearnerQuestionResponse>>> getTestQuestions(
+                        @PathVariable Long testId,
+                        @RequestParam Long attemptId) {
+
+                List<LearnerQuestionResponse> response = testService.getTestQuestions(testId, attemptId);
+                return ResponseEntity.ok(ApiResponse.<List<LearnerQuestionResponse>>builder()
+                                .success(true)
+                                .message("Questions retrieved successfully")
                                 .data(response)
                                 .build());
         }

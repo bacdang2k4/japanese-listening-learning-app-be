@@ -104,10 +104,70 @@ public class TestServiceImpl implements TestService {
                 .resultId(saved.getId())
                 .profileId(profile.getId())
                 .testId(test.getId())
+                .testName(test.getTestName())
+                .audioUrl(test.getAudioUrl())
+                .duration(test.getDuration())
+                .passCondition(test.getPassCondition())
+                .totalQuestions(test.getTotalQuestions())
                 .mode(saved.getMode().name())
                 .status(saved.getStatus().name())
                 .startedAt(saved.getStartedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LearnerQuestionResponse> getTestQuestions(Long testId, Long attemptId) {
+        TestAttempt attempt = testAttemptRepository.findById(attemptId)
+                .orElseThrow(() -> new ResourceNotFoundException("Test attempt not found"));
+
+        if (!attempt.getTest().getId().equals(testId)) {
+            throw new BusinessException("Attempt does not belong to this test");
+        }
+        if (attempt.getStatus() != AttemptStatusEnum.IN_PROGRESS) {
+            throw new BusinessException("Test attempt is not in progress");
+        }
+
+        boolean isPractice = attempt.getMode() == TestModeEnum.PRACTICE;
+
+        List<Question> questions = questionRepository.findByTestId(testId);
+
+        return questions.stream()
+                .sorted((a, b) -> {
+                    Integer oa = a.getQuestionOrder();
+                    Integer ob = b.getQuestionOrder();
+                    if (oa == null && ob == null) return 0;
+                    if (oa == null) return 1;
+                    if (ob == null) return -1;
+                    return oa.compareTo(ob);
+                })
+                .map(q -> {
+                    List<Answer> answers = answerRepository.findByQuestionId(q.getId());
+                    List<LearnerAnswerOption> options = answers.stream()
+                            .sorted((a, b) -> {
+                                Integer oaA = a.getAnswerOrder();
+                                Integer oaB = b.getAnswerOrder();
+                                if (oaA == null && oaB == null) return 0;
+                                if (oaA == null) return 1;
+                                if (oaB == null) return -1;
+                                return oaA.compareTo(oaB);
+                            })
+                            .map(a -> LearnerAnswerOption.builder()
+                                    .answerId(a.getId())
+                                    .content(a.getContent())
+                                    .answerOrder(a.getAnswerOrder())
+                                    .isCorrect(isPractice ? a.getIsCorrect() : null)
+                                    .build())
+                            .toList();
+
+                    return LearnerQuestionResponse.builder()
+                            .questionId(q.getId())
+                            .content(q.getContent())
+                            .questionOrder(q.getQuestionOrder())
+                            .answers(options)
+                            .build();
+                })
+                .toList();
     }
 
     @Override
