@@ -238,7 +238,7 @@ public class AiTestServiceImpl implements AiTestService {
     private String buildPrompt(AiGenerateRequest req, Topic topic) {
         String promptTemplate = """
                 Generate a Japanese listening test about the topic: "%s".
-                JLPT Level: N%d
+                JLPT Level: %s
                 Difficulty: %s
                 Number of questions: %d
                 Audio duration target: about %d minutes.
@@ -275,7 +275,7 @@ public class AiTestServiceImpl implements AiTestService {
                 - Wrap everything inside <speak>
                 - Use <prosody> to control speed and pitch
                 - Use <break time="..."/> pauses between sentences
-                - Use simple natural Japanese conversation suitable for JLPT N%d learners
+                - Use simple natural Japanese conversation suitable for JLPT %s learners
                 - The conversation must sound like two people greeting or talking naturally
 
                 Example structure to follow:
@@ -295,16 +295,16 @@ public class AiTestServiceImpl implements AiTestService {
                 9. The final output must be valid JSON.
                 """;
 
-        Long levelId = topic.getLevel() != null ? topic.getLevel().getId() : 5L;
+        String levelName = topic.getLevel() != null ? topic.getLevel().getLevelName() : "N5";
 
         return String.format(
                 promptTemplate,
                 topic.getTopicName(),
-                levelId,
+                levelName,
                 req.getDifficulty(),
                 req.getQuestionCount(),
                 req.getDuration(),
-                levelId,
+                levelName,
                 req.getQuestionCount());
     }
 }

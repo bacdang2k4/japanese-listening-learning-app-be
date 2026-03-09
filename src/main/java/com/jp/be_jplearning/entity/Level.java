@@ -22,6 +22,9 @@ public class Level {
     @Column(name = "level_name", nullable = false)
     private String levelName;
 
+    @Column(name = "level_order")
+    private Integer levelOrder;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_admin_id")
     private Admin admin;

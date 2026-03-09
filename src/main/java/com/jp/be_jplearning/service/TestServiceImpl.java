@@ -27,12 +27,14 @@ public class TestServiceImpl implements TestService {
     private final AudioTestRepository testRepository;
     private final TopicRepository topicRepository;
     private final ProfileRepository profileRepository;
+    private final ProfileLevelRepository profileLevelRepository;
     private final ProfileTopicRepository profileTopicRepository;
     private final TestAttemptRepository testAttemptRepository;
     private final TestResultRepository testResultRepository;
     private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
     private final LearnerAnswerRepository learnerAnswerRepository;
+    private final LevelRepository levelRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -69,11 +71,17 @@ public class TestServiceImpl implements TestService {
         Profile profile = profileRepository.findById(request.getProfileId())
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
 
+        Long topicLevelId = test.getTopic().getLevel().getId();
+        ProfileLevelId plId = new ProfileLevelId(profile.getId(), topicLevelId);
+        if (!profileLevelRepository.existsById(plId)) {
+            throw new BusinessException("Level chưa được mở khóa cho profile này");
+        }
+
         ProfileTopicId ptId = new ProfileTopicId();
         ptId.setProfileId(profile.getId());
         ptId.setTopicId(test.getTopic().getId());
 
-        ProfileTopic profileTopic = profileTopicRepository.findById(ptId)
+        profileTopicRepository.findById(ptId)
                 .orElseGet(() -> {
                     ProfileTopic pt = new ProfileTopic();
                     pt.setId(ptId);
@@ -171,12 +179,92 @@ public class TestServiceImpl implements TestService {
 
         TestResult savedResult = testResultRepository.save(testResult);
 
+        if (isPassed && attempt.getMode() == TestModeEnum.EXAM) {
+            handleProgression(attempt.getProfile(), attempt.getTest().getTopic());
+        }
+
         return SubmitTestResponse.builder()
                 .resultId(savedResult.getId())
                 .score(score)
                 .isPassed(isPassed)
                 .status(attempt.getStatus().name())
                 .build();
+    }
+
+    private void handleProgression(Profile profile, Topic topic) {
+        Long profileId = profile.getId();
+        Long topicId = topic.getId();
+        Level topicLevel = topic.getLevel();
+
+        // 1. Check if this topic now has at least one passed EXAM
+        long passedExams = testResultRepository.countPassedByProfileAndTopicAndMode(
+                profileId, topicId, TestModeEnum.EXAM);
+        if (passedExams <= 1) {
+            // First EXAM pass for this topic -> mark ProfileTopic as PASS
+            ProfileTopicId ptId = new ProfileTopicId();
+            ptId.setProfileId(profileId);
+            ptId.setTopicId(topicId);
+            profileTopicRepository.findById(ptId).ifPresent(pt -> {
+                if (pt.getStatus() != ProgressStatusEnum.PASS) {
+                    pt.setStatus(ProgressStatusEnum.PASS);
+                    profileTopicRepository.save(pt);
+                }
+            });
+        }
+
+        // 2. Check if all topics in the level are now PASS
+        List<ProfileTopic> levelTopics = profileTopicRepository
+                .findByIdProfileIdAndTopicLevelId(profileId, topicLevel.getId());
+        List<Topic> allTopicsInLevel = topicRepository.findByLevelId(topicLevel.getId());
+
+        if (allTopicsInLevel.isEmpty()) return;
+
+        boolean allTopicsPassed = allTopicsInLevel.stream().allMatch(t -> {
+            return levelTopics.stream()
+                    .filter(pt -> pt.getTopic().getId().equals(t.getId()))
+                    .anyMatch(pt -> pt.getStatus() == ProgressStatusEnum.PASS);
+        });
+
+        if (!allTopicsPassed) return;
+
+        // 3. Mark ProfileLevel as PASS
+        ProfileLevelId plId = new ProfileLevelId(profileId, topicLevel.getId());
+        profileLevelRepository.findById(plId).ifPresent(pl -> {
+            if (pl.getStatus() != ProgressStatusEnum.PASS) {
+                pl.setStatus(ProgressStatusEnum.PASS);
+                profileLevelRepository.save(pl);
+            }
+        });
+
+        // 4. Unlock next level
+        if (topicLevel.getLevelOrder() == null) return;
+        int nextOrder = topicLevel.getLevelOrder() + 1;
+        levelRepository.findByLevelOrder(nextOrder).ifPresent(nextLevel -> {
+            ProfileLevelId nextPlId = new ProfileLevelId(profileId, nextLevel.getId());
+            if (!profileLevelRepository.existsById(nextPlId)) {
+                ProfileLevel nextPl = new ProfileLevel();
+                nextPl.setId(nextPlId);
+                nextPl.setProfile(profile);
+                nextPl.setLevel(nextLevel);
+                nextPl.setStatus(ProgressStatusEnum.LEARNING);
+                profileLevelRepository.save(nextPl);
+
+                List<Topic> nextTopics = topicRepository.findByLevelId(nextLevel.getId());
+                for (Topic nextTopic : nextTopics) {
+                    ProfileTopicId nextPtId = new ProfileTopicId();
+                    nextPtId.setProfileId(profileId);
+                    nextPtId.setTopicId(nextTopic.getId());
+                    if (!profileTopicRepository.existsById(nextPtId)) {
+                        ProfileTopic nextPt = new ProfileTopic();
+                        nextPt.setId(nextPtId);
+                        nextPt.setProfile(profile);
+                        nextPt.setTopic(nextTopic);
+                        nextPt.setStatus(ProgressStatusEnum.LEARNING);
+                        profileTopicRepository.save(nextPt);
+                    }
+                }
+            }
+        });
     }
 
     @Override

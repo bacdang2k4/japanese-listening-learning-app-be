@@ -52,11 +52,6 @@ public class AuthServiceImpl implements AuthService {
 
         Learner savedLearner = learnerRepository.save(learner);
 
-        Profile profile = new Profile();
-        profile.setLearner(savedLearner);
-        profile.setStartDate(LocalDateTime.now());
-        profileRepository.save(profile);
-
         return RegisterResponse.builder()
                 .learnerId(savedLearner.getId())
                 .username(savedLearner.getUsername())
@@ -74,7 +69,11 @@ public class AuthServiceImpl implements AuthService {
         Learner learner = learnerRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BusinessException("Tài khoản '" + request.getUsername() + "' không tồn tại"));
 
-        // Check if this is a learner (not admin)
+        // Block login if account is locked
+        if (learner.getStatus() == com.jp.be_jplearning.entity.enums.LearnerStatusEnum.LOCKED) {
+            throw new BusinessException("Tài khoản đã bị khóa. Vui lòng liên hệ quản trị viên.");
+        }
+
         try {
             Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword()));
@@ -85,8 +84,8 @@ public class AuthServiceImpl implements AuthService {
                 throw new BusinessException("Tài khoản này không phải là tài khoản học viên");
             }
 
-            Profile profile = profileRepository.findByLearnerId(learner.getId()).stream().findFirst()
-                    .orElseThrow(() -> new BusinessException("Không tìm thấy hồ sơ cho tài khoản này"));
+            Long profileId = profileRepository.findByLearnerId(learner.getId()).stream()
+                    .findFirst().map(Profile::getId).orElse(null);
 
             String token = jwtUtil.generateToken(userDetails, learner.getId(), "ROLE_LEARNER");
 
@@ -94,7 +93,7 @@ public class AuthServiceImpl implements AuthService {
                     .accessToken(token)
                     .tokenType("Bearer")
                     .learnerId(learner.getId())
-                    .profileId(profile.getId())
+                    .profileId(profileId)
                     .username(learner.getUsername())
                     .role("ROLE_LEARNER")
                     .firstName(learner.getFirstName())
