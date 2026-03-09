@@ -40,8 +40,9 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(request -> {
                     var corsConfig = new CorsConfiguration();
                     corsConfig.setAllowedOriginPatterns(List.of(
-                            "http://localhost:*",
-                            "https://*.jplearning.com"
+                        "http://localhost:*",
+                        "https://japanese-listening-learning-app-fe.vercel.app",
+                        "https://*.jplearning.com"
                     ));
                     corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                     corsConfig.setAllowedHeaders(List.of("*"));
