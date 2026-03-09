@@ -9,6 +9,7 @@ import com.jp.be_jplearning.entity.Level;
 import com.jp.be_jplearning.repository.AdminRepository;
 import com.jp.be_jplearning.repository.LevelRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,13 +31,12 @@ public class LevelServiceImpl implements LevelService {
     @Override
     @Transactional
     public LevelResponse createLevel(LevelRequest request) {
-        Admin admin = adminRepository.findById(request.getAdminId())
-                .orElseThrow(() -> new ResourceNotFoundException("Admin not found with id: " + request.getAdminId()));
+        Admin admin = getCurrentAdmin();
 
         Level level = new Level();
         level.setLevelName(request.getLevelName());
         level.setAdmin(admin);
-        level.setCreatedAt(LocalDateTime.now()); // Manually set for immediate response if needed
+        level.setCreatedAt(LocalDateTime.now());
 
         Level savedLevel = levelRepository.save(level);
 
@@ -77,13 +77,6 @@ public class LevelServiceImpl implements LevelService {
         Level level = levelRepository.findById(levelId)
                 .orElseThrow(() -> new ResourceNotFoundException("Level not found with id: " + levelId));
 
-        if (!level.getAdmin().getId().equals(request.getAdminId())) {
-            Admin newAdmin = adminRepository.findById(request.getAdminId())
-                    .orElseThrow(
-                            () -> new ResourceNotFoundException("Admin not found with id: " + request.getAdminId()));
-            level.setAdmin(newAdmin);
-        }
-
         level.setLevelName(request.getLevelName());
 
         Level updatedLevel = levelRepository.save(level);
@@ -107,5 +100,11 @@ public class LevelServiceImpl implements LevelService {
                 .adminName(level.getAdmin() != null ? level.getAdmin().getUsername() : null)
                 .createdAt(level.getCreatedAt())
                 .build();
+    }
+
+    private Admin getCurrentAdmin() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        return adminRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Admin not found"));
     }
 }

@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -94,12 +95,17 @@ public class QuestionServiceImpl implements QuestionService {
             throw new ResourceNotFoundException("AudioTest not found with id: " + testId);
         }
 
-        List<Question> questions = questionRepository.findByTestId(testId);
+        List<Question> questions = questionRepository.findByTestIdOrderByQuestionOrder(testId);
 
-        return questions.stream().map(q -> {
-            List<Answer> answersForQ = answerRepository.findByQuestionId(q.getId());
-            return mapToResponse(q, answersForQ);
-        }).collect(Collectors.toList());
+        List<Long> questionIds = questions.stream().map(Question::getId).toList();
+        Map<Long, List<Answer>> answerMap = questionIds.isEmpty()
+                ? Map.of()
+                : answerRepository.findByQuestionIds(questionIds).stream()
+                        .collect(Collectors.groupingBy(a -> a.getQuestion().getId()));
+
+        return questions.stream()
+                .map(q -> mapToResponse(q, answerMap.getOrDefault(q.getId(), List.of())))
+                .collect(Collectors.toList());
     }
 
     private void validateAnswers(List<AnswerRequest> answers) {

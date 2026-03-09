@@ -39,9 +39,13 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(request -> {
                     var corsConfig = new CorsConfiguration();
-                    corsConfig.setAllowedOrigins(List.of("*"));
+                    corsConfig.setAllowedOriginPatterns(List.of(
+                            "http://localhost:*",
+                            "https://*.jplearning.com"
+                    ));
                     corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
                     corsConfig.setAllowedHeaders(List.of("*"));
+                    corsConfig.setAllowCredentials(true);
                     return corsConfig;
                 }))
                 .authorizeHttpRequests(auth -> auth
@@ -62,7 +66,7 @@ public class SecurityConfig {
                                 "/swagger-ui.html")
                         .permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        .requestMatchers("/api/v1/learner/**").hasRole("LEARNER")
+                        .requestMatchers("/api/v1/learner/**", "/api/v1/learners/me/**").hasRole("LEARNER")
                         .requestMatchers("/api/v1/levels/**", "/api/v1/topics/**",
                                 "/api/v1/tests/**", "/api/v1/test-results/**", "/api/v1/profiles/**")
                         .hasRole("LEARNER")

@@ -2,6 +2,7 @@ package com.jp.be_jplearning.service;
 
 import com.jp.be_jplearning.common.PaginationResponse;
 import com.jp.be_jplearning.common.ResourceNotFoundException;
+import com.jp.be_jplearning.common.SortUtils;
 import com.jp.be_jplearning.dto.LearnerResponse;
 import com.jp.be_jplearning.entity.Learner;
 import com.jp.be_jplearning.entity.enums.LearnerStatusEnum;
@@ -10,11 +11,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,16 +24,13 @@ public class LearnerServiceImpl implements LearnerService {
 
     private final LearnerRepository learnerRepository;
 
+    private static final Set<String> ALLOWED_SORT = Set.of("id", "username", "email", "firstName", "lastName", "createdAt", "status");
+
     @Override
     @Transactional(readOnly = true)
     public PaginationResponse<LearnerResponse> getLearners(int page, int size, String keyword, String status,
             String sortStr) {
-        String[] sortParams = sortStr.split(",");
-        String sortBy = sortParams[0];
-        Sort.Direction direction = sortParams.length > 1 && sortParams[1].equalsIgnoreCase("desc") ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, SortUtils.parseSort(sortStr, ALLOWED_SORT, "createdAt"));
 
         LearnerStatusEnum statusEnum = null;
         if (status != null && !status.isBlank()) {

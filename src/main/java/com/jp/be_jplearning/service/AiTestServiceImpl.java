@@ -140,10 +140,15 @@ public class AiTestServiceImpl implements AiTestService {
         AudioTest test = audioTestRepository.findById(testId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test not found"));
 
-        List<Question> questions = questionRepository.findByTestId(testId);
+        List<Question> questions = questionRepository.findByTestIdOrderByQuestionOrder(testId);
+        List<Long> questionIds = questions.stream().map(Question::getId).toList();
+        Map<Long, List<Answer>> answerMap = questionIds.isEmpty()
+                ? Map.of()
+                : answerRepository.findByQuestionIds(questionIds).stream()
+                        .collect(Collectors.groupingBy(a -> a.getQuestion().getId()));
+
         List<QuestionResponse> questionResponses = questions.stream().map(q -> {
-            List<Answer> answers = answerRepository.findByQuestionId(q.getId());
-            List<AnswerResponse> answerResponses = answers.stream()
+            List<AnswerResponse> answerResponses = answerMap.getOrDefault(q.getId(), List.of()).stream()
                     .map(a -> AnswerResponse.builder()
                             .answerId(a.getId())
                             .content(a.getContent())

@@ -1,6 +1,7 @@
 package com.jp.be_jplearning.service;
 
 import com.jp.be_jplearning.common.PaginationResponse;
+import com.jp.be_jplearning.common.SortUtils;
 import com.jp.be_jplearning.dto.AdminProfileResponse;
 import com.jp.be_jplearning.dto.AdminTestResultResponse;
 import com.jp.be_jplearning.entity.*;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,15 +29,14 @@ public class AdminProgressServiceImpl implements AdminProgressService {
     private final ProfileTopicRepository profileTopicRepository;
     private final TestResultRepository testResultRepository;
 
+    private static final Set<String> PROFILE_SORT_COLUMNS = Set.of("id", "startDate", "status");
+    private static final Set<String> RESULT_SORT_COLUMNS = Set.of("id", "score", "createdAt", "isPassed");
+
     @Override
     @Transactional(readOnly = true)
     public PaginationResponse<AdminProfileResponse> getProfiles(int page, int size, String keyword, String sortStr) {
-        String[] sortParams = sortStr.split(",");
-        String sortBy = sortParams[0];
-        Sort.Direction direction = sortParams.length > 1 && sortParams[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Sort sort = SortUtils.parseSort(sortStr, PROFILE_SORT_COLUMNS, "id");
+        Pageable pageable = PageRequest.of(page, size, sort);
         Page<Profile> profilePage = profileRepository.searchProfiles(keyword, pageable);
 
         List<AdminProfileResponse> content = profilePage.getContent().stream()
@@ -56,12 +57,8 @@ public class AdminProgressServiceImpl implements AdminProgressService {
     @Transactional(readOnly = true)
     public PaginationResponse<AdminTestResultResponse> getTestResults(int page, int size, String keyword,
             String mode, Boolean passed, String sortStr) {
-        String[] sortParams = sortStr.split(",");
-        String sortBy = sortParams[0];
-        Sort.Direction direction = sortParams.length > 1 && sortParams[1].equalsIgnoreCase("desc")
-                ? Sort.Direction.DESC : Sort.Direction.ASC;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Sort sort = SortUtils.parseSort(sortStr, RESULT_SORT_COLUMNS, "id");
+        Pageable pageable = PageRequest.of(page, size, sort);
 
         TestModeEnum modeEnum = null;
         if (mode != null && !mode.isBlank()) {
@@ -90,14 +87,13 @@ public class AdminProgressServiceImpl implements AdminProgressService {
     private AdminProfileResponse mapToAdminProfileResponse(Profile profile) {
         Learner learner = profile.getLearner();
 
-        List<ProfileLevel> profileLevels = profileLevelRepository.findByIdProfileId(profile.getId());
+        List<ProfileLevel> profileLevels = profileLevelRepository.findByProfileIdWithLevel(profile.getId());
         int completedLevels = (int) profileLevels.stream()
                 .filter(pl -> pl.getStatus() == ProgressStatusEnum.PASS)
                 .count();
 
-        long completedTopics = profileLevels.stream()
-                .flatMap(pl -> profileTopicRepository
-                        .findByIdProfileIdAndTopicLevelId(profile.getId(), pl.getLevel().getId()).stream())
+        List<ProfileTopic> allTopics = profileTopicRepository.findByProfileIdWithTopic(profile.getId());
+        long completedTopics = allTopics.stream()
                 .filter(pt -> pt.getStatus() == ProgressStatusEnum.PASS)
                 .count();
 

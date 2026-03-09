@@ -78,13 +78,14 @@ public class LearnerContentController {
     @Operation(summary = "Get Vocabularies For Topic (via VocabBanks)")
     public ResponseEntity<ApiResponse<List<VocabularyResponse>>> getVocabulariesByTopic(@PathVariable Long topicId) {
         List<VocabBank> banks = vocabBankRepository.findByTopicId(topicId);
+        List<Long> bankIds = banks.stream().map(VocabBank::getId).toList();
 
         Set<Long> seen = new LinkedHashSet<>();
         List<VocabularyResponse> response = new ArrayList<>();
 
-        for (VocabBank bank : banks) {
+        if (!bankIds.isEmpty()) {
             List<VocabBankVocabulary> entries = vocabBankVocabularyRepository
-                    .findByVocabBankIdOrderByVocabOrderAsc(bank.getId());
+                    .findByVocabBankIdsWithVocabulary(bankIds);
             for (VocabBankVocabulary entry : entries) {
                 var vocab = entry.getVocabulary();
                 if (seen.add(vocab.getId())) {

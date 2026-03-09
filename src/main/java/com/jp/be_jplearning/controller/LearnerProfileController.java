@@ -1,9 +1,7 @@
 package com.jp.be_jplearning.controller;
 
 import com.jp.be_jplearning.common.ApiResponse;
-import com.jp.be_jplearning.dto.CreateProfileRequest;
-import com.jp.be_jplearning.dto.ProfileProgressResponse;
-import com.jp.be_jplearning.dto.ProfileResponse;
+import com.jp.be_jplearning.dto.*;
 import com.jp.be_jplearning.service.LearnerProfileService;
 import com.jp.be_jplearning.service.ProfileService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -27,6 +25,31 @@ public class LearnerProfileController {
 
     private final LearnerProfileService learnerProfileService;
     private final ProfileService profileService;
+
+    @GetMapping
+    @PreAuthorize("hasRole('LEARNER')")
+    @Operation(summary = "Get My Account Info", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<LearnerAccountResponse>> getMyAccount() {
+        LearnerAccountResponse account = learnerProfileService.getMyAccount();
+        return ResponseEntity.ok(ApiResponse.<LearnerAccountResponse>builder()
+                .success(true)
+                .message("Account info retrieved successfully")
+                .data(account)
+                .build());
+    }
+
+    @PutMapping
+    @PreAuthorize("hasRole('LEARNER')")
+    @Operation(summary = "Update My Account Info", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<LearnerAccountResponse>> updateMyInfo(
+            @Valid @RequestBody UpdateLearnerInfoRequest request) {
+        LearnerAccountResponse account = learnerProfileService.updateMyInfo(request);
+        return ResponseEntity.ok(ApiResponse.<LearnerAccountResponse>builder()
+                .success(true)
+                .message("Account info updated successfully")
+                .data(account)
+                .build());
+    }
 
     @GetMapping("/profiles")
     @PreAuthorize("hasRole('LEARNER')")

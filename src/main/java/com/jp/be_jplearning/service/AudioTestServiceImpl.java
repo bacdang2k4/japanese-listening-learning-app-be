@@ -2,6 +2,7 @@ package com.jp.be_jplearning.service;
 
 import com.jp.be_jplearning.common.PaginationResponse;
 import com.jp.be_jplearning.common.ResourceNotFoundException;
+import com.jp.be_jplearning.common.SortUtils;
 import com.jp.be_jplearning.dto.AudioTestRequest;
 import com.jp.be_jplearning.dto.AudioTestResponse;
 import com.jp.be_jplearning.entity.AudioTest;
@@ -13,12 +14,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,16 +29,13 @@ public class AudioTestServiceImpl implements AudioTestService {
     private final AudioTestRepository audioTestRepository;
     private final TopicRepository topicRepository;
 
+    private static final Set<String> ALLOWED_SORT = Set.of("id", "testName", "createdAt", "status", "duration");
+
     @Override
     @Transactional(readOnly = true)
     public PaginationResponse<AudioTestResponse> getAudioTests(int page, int size, Long topicId, TestStatusEnum status,
             String keyword, String sortStr) {
-        String[] sortParams = sortStr.split(",");
-        String sortBy = sortParams[0];
-        Sort.Direction direction = sortParams.length > 1 && sortParams[1].equalsIgnoreCase("desc") ? Sort.Direction.DESC
-                : Sort.Direction.ASC;
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
+        Pageable pageable = PageRequest.of(page, size, SortUtils.parseSort(sortStr, ALLOWED_SORT, "createdAt"));
 
         Page<AudioTest> testPage = audioTestRepository.searchAudioTests(topicId, status, keyword, pageable);
 

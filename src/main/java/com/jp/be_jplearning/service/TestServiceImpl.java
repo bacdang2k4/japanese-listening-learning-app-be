@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,7 @@ public class TestServiceImpl implements TestService {
     private final AnswerRepository answerRepository;
     private final LearnerAnswerRepository learnerAnswerRepository;
     private final LevelRepository levelRepository;
+    private final LearnerRepository learnerRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -70,6 +73,8 @@ public class TestServiceImpl implements TestService {
 
         Profile profile = profileRepository.findById(request.getProfileId())
                 .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+
+        verifyProfileOwnership(profile);
 
         Long topicLevelId = test.getTopic().getLevel().getId();
         ProfileLevelId plId = new ProfileLevelId(profile.getId(), topicLevelId);
@@ -121,6 +126,8 @@ public class TestServiceImpl implements TestService {
         TestAttempt attempt = testAttemptRepository.findById(attemptId)
                 .orElseThrow(() -> new ResourceNotFoundException("Test attempt not found"));
 
+        verifyProfileOwnership(attempt.getProfile());
+
         if (!attempt.getTest().getId().equals(testId)) {
             throw new BusinessException("Attempt does not belong to this test");
         }
@@ -130,28 +137,19 @@ public class TestServiceImpl implements TestService {
 
         boolean isPractice = attempt.getMode() == TestModeEnum.PRACTICE;
 
-        List<Question> questions = questionRepository.findByTestId(testId);
+        List<Question> questions = questionRepository.findByTestIdOrderByQuestionOrder(testId);
+
+        List<Long> questionIds = questions.stream().map(Question::getId).toList();
+        List<Answer> allAnswers = questionIds.isEmpty()
+                ? List.of()
+                : answerRepository.findByQuestionIds(questionIds);
+        Map<Long, List<Answer>> answersByQuestionId = allAnswers.stream()
+                .collect(Collectors.groupingBy(a -> a.getQuestion().getId()));
 
         return questions.stream()
-                .sorted((a, b) -> {
-                    Integer oa = a.getQuestionOrder();
-                    Integer ob = b.getQuestionOrder();
-                    if (oa == null && ob == null) return 0;
-                    if (oa == null) return 1;
-                    if (ob == null) return -1;
-                    return oa.compareTo(ob);
-                })
                 .map(q -> {
-                    List<Answer> answers = answerRepository.findByQuestionId(q.getId());
+                    List<Answer> answers = answersByQuestionId.getOrDefault(q.getId(), List.of());
                     List<LearnerAnswerOption> options = answers.stream()
-                            .sorted((a, b) -> {
-                                Integer oaA = a.getAnswerOrder();
-                                Integer oaB = b.getAnswerOrder();
-                                if (oaA == null && oaB == null) return 0;
-                                if (oaA == null) return 1;
-                                if (oaB == null) return -1;
-                                return oaA.compareTo(oaB);
-                            })
                             .map(a -> LearnerAnswerOption.builder()
                                     .answerId(a.getId())
                                     .content(a.getContent())
@@ -333,21 +331,29 @@ public class TestServiceImpl implements TestService {
         TestResult testResult = testResultRepository.findById(resultId)
                 .orElseThrow(() -> new ResourceNotFoundException("TestResult not found"));
 
-        if (!testResult.getAttempt().getProfile().getId().equals(profileId)) {
+        Profile profile = testResult.getAttempt().getProfile();
+        verifyProfileOwnership(profile);
+
+        if (!profile.getId().equals(profileId)) {
             throw new BusinessException("Cannot access the result of another user");
         }
 
-        List<LearnerAnswer> learnerAnswers = learnerAnswerRepository.findByAttemptId(testResult.getAttempt().getId());
+        Long testId = testResult.getAttempt().getTest().getId();
+        List<LearnerAnswer> learnerAnswers = learnerAnswerRepository.findByAttemptIdWithDetails(testResult.getAttempt().getId());
+
+        List<Long> questionIds = learnerAnswers.stream()
+                .map(la -> la.getQuestion().getId())
+                .distinct().toList();
+        List<Answer> correctAnswers = questionIds.isEmpty()
+                ? List.of()
+                : answerRepository.findCorrectAnswersByQuestionIds(questionIds);
+        Map<Long, Answer> correctByQuestionId = correctAnswers.stream()
+                .collect(Collectors.toMap(a -> a.getQuestion().getId(), a -> a, (a1, a2) -> a1));
 
         List<QuestionResultResponse> questionResults = learnerAnswers.stream().map(la -> {
             Question q = la.getQuestion();
             Answer selected = la.getSelectedAnswer();
-
-            Answer correct = q.getTest() == null ? null
-                    : answerRepository.findAll().stream()
-                            .filter(a -> a.getQuestion().getId().equals(q.getId())
-                                    && Boolean.TRUE.equals(a.getIsCorrect()))
-                            .findFirst().orElse(null);
+            Answer correct = correctByQuestionId.get(q.getId());
 
             return QuestionResultResponse.builder()
                     .questionId(q.getId())
@@ -374,6 +380,10 @@ public class TestServiceImpl implements TestService {
         if (size > 50)
             throw new BusinessException("Maximum page size is 50");
 
+        Profile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new ResourceNotFoundException("Profile not found"));
+        verifyProfileOwnership(profile);
+
         Pageable pageable = PageRequest.of(page, size);
         Page<TestResult> resultPage = testResultRepository.findByAttempt_Profile_Id(profileId, pageable);
 
@@ -388,5 +398,24 @@ public class TestServiceImpl implements TestService {
 
         return new PaginationResponse<>(content, resultPage.getNumber(), resultPage.getSize(),
                 resultPage.getTotalElements(), resultPage.getTotalPages(), resultPage.isLast());
+    }
+
+    private void verifyProfileOwnership(Profile profile) {
+        Learner currentLearner = getCurrentLearner();
+        if (!profile.getLearner().getId().equals(currentLearner.getId())) {
+            throw new BusinessException("You do not have permission to access this profile");
+        }
+    }
+
+    private Learner getCurrentLearner() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        String username;
+        if (principal instanceof UserDetails ud) {
+            username = ud.getUsername();
+        } else {
+            username = principal.toString();
+        }
+        return learnerRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Learner not found"));
     }
 }

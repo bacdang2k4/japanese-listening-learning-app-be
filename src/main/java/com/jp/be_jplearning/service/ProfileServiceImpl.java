@@ -92,9 +92,13 @@ public class ProfileServiceImpl implements ProfileService {
         }
 
         List<Level> allLevels = levelRepository.findAllByOrderByLevelOrderAsc();
-        List<ProfileLevel> profileLevels = profileLevelRepository.findByIdProfileId(profileId);
+        List<ProfileLevel> profileLevels = profileLevelRepository.findByProfileIdWithLevel(profileId);
         Map<Long, ProfileLevel> profileLevelMap = profileLevels.stream()
                 .collect(Collectors.toMap(pl -> pl.getLevel().getId(), pl -> pl));
+
+        List<ProfileTopic> allProfileTopics = profileTopicRepository.findByProfileIdWithTopic(profileId);
+        Map<Long, List<ProfileTopic>> profileTopicsByLevel = allProfileTopics.stream()
+                .collect(Collectors.groupingBy(pt -> pt.getTopic().getLevel().getId()));
 
         List<ProfileProgressResponse.LevelProgressItem> levelItems = new ArrayList<>();
 
@@ -109,8 +113,7 @@ public class ProfileServiceImpl implements ProfileService {
                 levelStatus = pl.getStatus().name();
 
                 List<Topic> topics = topicRepository.findByLevelId(level.getId());
-                List<ProfileTopic> profileTopics = profileTopicRepository
-                        .findByIdProfileIdAndTopicLevelId(profileId, level.getId());
+                List<ProfileTopic> profileTopics = profileTopicsByLevel.getOrDefault(level.getId(), List.of());
                 Map<Long, ProfileTopic> ptMap = profileTopics.stream()
                         .collect(Collectors.toMap(pt -> pt.getTopic().getId(), pt -> pt));
 
@@ -148,7 +151,7 @@ public class ProfileServiceImpl implements ProfileService {
     }
 
     private ProfileResponse mapToProfileResponse(Profile profile) {
-        List<ProfileLevel> profileLevels = profileLevelRepository.findByIdProfileId(profile.getId());
+        List<ProfileLevel> profileLevels = profileLevelRepository.findByProfileIdWithLevel(profile.getId());
 
         ProfileLevel currentLevel = profileLevels.stream()
                 .filter(pl -> pl.getStatus() == ProgressStatusEnum.LEARNING)
