@@ -11,6 +11,20 @@ import org.springframework.data.repository.query.Param;
 public interface TestResultRepository extends JpaRepository<TestResult, Long> {
     Page<TestResult> findByAttempt_Profile_Id(Long profileId, Pageable pageable);
 
+    @Query("SELECT tr FROM TestResult tr " +
+            "JOIN tr.attempt a JOIN a.profile p JOIN p.learner l " +
+            "WHERE (:keyword IS NULL OR " +
+            "LOWER(l.username) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR " +
+            "LOWER(l.firstName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR " +
+            "LOWER(l.lastName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR " +
+            "LOWER(a.test.testName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) " +
+            "AND (CAST(:mode AS string) IS NULL OR a.mode = :mode) " +
+            "AND (:passed IS NULL OR tr.isPassed = :passed)")
+    Page<TestResult> searchTestResults(@Param("keyword") String keyword,
+            @Param("mode") TestModeEnum mode,
+            @Param("passed") Boolean passed,
+            Pageable pageable);
+
     @Query("SELECT COUNT(tr) FROM TestResult tr " +
             "WHERE tr.attempt.profile.id = :profileId " +
             "AND tr.attempt.test.topic.id = :topicId " +
@@ -32,4 +46,8 @@ public interface TestResultRepository extends JpaRepository<TestResult, Long> {
             "AND tr.attempt.test.topic.id = :topicId")
     long countByProfileAndTopic(@Param("profileId") Long profileId,
             @Param("topicId") Long topicId);
+
+    @Query("SELECT COALESCE(SUM(tr.score), 0) FROM TestResult tr " +
+            "WHERE tr.attempt.profile.id = :profileId")
+    int sumScoreByProfileId(@Param("profileId") Long profileId);
 }
