@@ -16,5 +16,5 @@ public interface TopicRepository extends JpaRepository<Topic, Long> {
             "(:keyword IS NULL OR LOWER(t.topicName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))")
     Page<Topic> searchTopics(@Param("levelId") Long levelId, @Param("keyword") String keyword, Pageable pageable);
 
-    List<Topic> findByLevelId(Long levelId);
+    List<Topic> findByLevelIdOrderByTopicOrderAsc(Long levelId);
 }

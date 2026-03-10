@@ -11,5 +11,7 @@ public class TopicResponse {
     private String topicName;
     private Long levelId;
     private String levelName;
+    private Integer topicOrder;
+    private Boolean isUnlocked;
     private LocalDateTime createdAt;
 }

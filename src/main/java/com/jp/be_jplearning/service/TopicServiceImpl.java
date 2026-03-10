@@ -28,7 +28,7 @@ public class TopicServiceImpl implements TopicService {
     private final TopicRepository topicRepository;
     private final LevelRepository levelRepository;
 
-    private static final Set<String> ALLOWED_SORT = Set.of("id", "topicName", "createdAt");
+    private static final Set<String> ALLOWED_SORT = Set.of("id", "topicName", "topicOrder", "createdAt");
 
     @Override
     @Transactional(readOnly = true)
@@ -69,6 +69,7 @@ public class TopicServiceImpl implements TopicService {
         Topic topic = new Topic();
         topic.setTopicName(request.getTopicName());
         topic.setLevel(level);
+        topic.setTopicOrder(request.getTopicOrder() != null ? request.getTopicOrder() : 0);
         topic.setCreatedAt(LocalDateTime.now());
 
         Topic savedTopic = topicRepository.save(topic);
@@ -89,6 +90,9 @@ public class TopicServiceImpl implements TopicService {
         }
 
         topic.setTopicName(request.getTopicName());
+        if (request.getTopicOrder() != null) {
+            topic.setTopicOrder(request.getTopicOrder());
+        }
 
         Topic updatedTopic = topicRepository.save(topic);
         return mapToResponse(updatedTopic);
@@ -109,6 +113,7 @@ public class TopicServiceImpl implements TopicService {
                 .topicName(topic.getTopicName())
                 .levelId(topic.getLevel() != null ? topic.getLevel().getId() : null)
                 .levelName(topic.getLevel() != null ? topic.getLevel().getLevelName() : null)
+                .topicOrder(topic.getTopicOrder())
                 .createdAt(topic.getCreatedAt())
                 .build();
     }

@@ -273,9 +273,10 @@ public class TestServiceImpl implements TestService {
         // 2. Check if all topics in the level are now PASS
         List<ProfileTopic> levelTopics = profileTopicRepository
                 .findByIdProfileIdAndTopicLevelId(profileId, topicLevel.getId());
-        List<Topic> allTopicsInLevel = topicRepository.findByLevelId(topicLevel.getId());
+        List<Topic> allTopicsInLevel = topicRepository.findByLevelIdOrderByTopicOrderAsc(topicLevel.getId());
 
-        if (allTopicsInLevel.isEmpty()) return;
+        if (allTopicsInLevel.isEmpty())
+            return;
 
         boolean allTopicsPassed = allTopicsInLevel.stream().allMatch(t -> {
             return levelTopics.stream()
@@ -283,7 +284,8 @@ public class TestServiceImpl implements TestService {
                     .anyMatch(pt -> pt.getStatus() == ProgressStatusEnum.PASS);
         });
 
-        if (!allTopicsPassed) return;
+        if (!allTopicsPassed)
+            return;
 
         // 3. Mark ProfileLevel as PASS
         ProfileLevelId plId = new ProfileLevelId(profileId, topicLevel.getId());
@@ -295,7 +297,8 @@ public class TestServiceImpl implements TestService {
         });
 
         // 4. Unlock next level
-        if (topicLevel.getLevelOrder() == null) return;
+        if (topicLevel.getLevelOrder() == null)
+            return;
         int nextOrder = topicLevel.getLevelOrder() + 1;
         levelRepository.findByLevelOrder(nextOrder).ifPresent(nextLevel -> {
             ProfileLevelId nextPlId = new ProfileLevelId(profileId, nextLevel.getId());
@@ -307,7 +310,7 @@ public class TestServiceImpl implements TestService {
                 nextPl.setStatus(ProgressStatusEnum.LEARNING);
                 profileLevelRepository.save(nextPl);
 
-                List<Topic> nextTopics = topicRepository.findByLevelId(nextLevel.getId());
+                List<Topic> nextTopics = topicRepository.findByLevelIdOrderByTopicOrderAsc(nextLevel.getId());
                 for (Topic nextTopic : nextTopics) {
                     ProfileTopicId nextPtId = new ProfileTopicId();
                     nextPtId.setProfileId(profileId);
@@ -339,7 +342,8 @@ public class TestServiceImpl implements TestService {
         }
 
         Long testId = testResult.getAttempt().getTest().getId();
-        List<LearnerAnswer> learnerAnswers = learnerAnswerRepository.findByAttemptIdWithDetails(testResult.getAttempt().getId());
+        List<LearnerAnswer> learnerAnswers = learnerAnswerRepository
+                .findByAttemptIdWithDetails(testResult.getAttempt().getId());
 
         List<Long> questionIds = learnerAnswers.stream()
                 .map(la -> la.getQuestion().getId())

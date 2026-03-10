@@ -21,6 +21,9 @@ public class Topic {
     @Column(name = "topic_name", nullable = false)
     private String topicName;
 
+    @Column(name = "topic_order")
+    private Integer topicOrder = 0;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "level_id", nullable = false)
     private Level level;

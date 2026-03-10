@@ -8,10 +8,8 @@ import com.jp.be_jplearning.entity.Level;
 import com.jp.be_jplearning.entity.Topic;
 import com.jp.be_jplearning.entity.VocabBank;
 import com.jp.be_jplearning.entity.VocabBankVocabulary;
-import com.jp.be_jplearning.repository.LevelRepository;
-import com.jp.be_jplearning.repository.TopicRepository;
-import com.jp.be_jplearning.repository.VocabBankRepository;
-import com.jp.be_jplearning.repository.VocabBankVocabularyRepository;
+import com.jp.be_jplearning.entity.enums.ProgressStatusEnum;
+import com.jp.be_jplearning.repository.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -29,83 +27,107 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class LearnerContentController {
 
-    private final LevelRepository levelRepository;
-    private final TopicRepository topicRepository;
-    private final VocabBankRepository vocabBankRepository;
-    private final VocabBankVocabularyRepository vocabBankVocabularyRepository;
+        private final LevelRepository levelRepository;
+        private final TopicRepository topicRepository;
+        private final VocabBankRepository vocabBankRepository;
+        private final VocabBankVocabularyRepository vocabBankVocabularyRepository;
+        private final ProfileTopicRepository profileTopicRepository;
 
-    @GetMapping("/levels")
-    @Operation(summary = "Get All Levels (ordered)")
-    public ResponseEntity<ApiResponse<List<LevelResponse>>> getLevels() {
-        List<Level> levels = levelRepository.findAllByOrderByLevelOrderAsc();
-        List<LevelResponse> response = levels.stream()
-                .map(l -> LevelResponse.builder()
-                        .id(l.getId())
-                        .levelName(l.getLevelName())
-                        .adminId(l.getAdmin() != null ? l.getAdmin().getId() : null)
-                        .adminName(l.getAdmin() != null ? l.getAdmin().getUsername() : null)
-                        .createdAt(l.getCreatedAt())
-                        .build())
-                .toList();
-        return ResponseEntity.ok(ApiResponse.<List<LevelResponse>>builder()
-                .success(true)
-                .message("Levels retrieved successfully")
-                .data(response)
-                .build());
-    }
-
-    @GetMapping("/levels/{levelId}/topics")
-    @Operation(summary = "Get Topics By Level")
-    public ResponseEntity<ApiResponse<List<TopicResponse>>> getTopicsByLevel(@PathVariable Long levelId) {
-        List<Topic> topics = topicRepository.findByLevelId(levelId);
-        List<TopicResponse> response = topics.stream()
-                .map(t -> TopicResponse.builder()
-                        .id(t.getId())
-                        .topicName(t.getTopicName())
-                        .levelId(t.getLevel().getId())
-                        .levelName(t.getLevel().getLevelName())
-                        .createdAt(t.getCreatedAt())
-                        .build())
-                .toList();
-        return ResponseEntity.ok(ApiResponse.<List<TopicResponse>>builder()
-                .success(true)
-                .message("Topics retrieved successfully")
-                .data(response)
-                .build());
-    }
-
-    @GetMapping("/topics/{topicId}/vocabularies")
-    @Operation(summary = "Get Vocabularies For Topic (via VocabBanks)")
-    public ResponseEntity<ApiResponse<List<VocabularyResponse>>> getVocabulariesByTopic(@PathVariable Long topicId) {
-        List<VocabBank> banks = vocabBankRepository.findByTopicId(topicId);
-        List<Long> bankIds = banks.stream().map(VocabBank::getId).toList();
-
-        Set<Long> seen = new LinkedHashSet<>();
-        List<VocabularyResponse> response = new ArrayList<>();
-
-        if (!bankIds.isEmpty()) {
-            List<VocabBankVocabulary> entries = vocabBankVocabularyRepository
-                    .findByVocabBankIdsWithVocabulary(bankIds);
-            for (VocabBankVocabulary entry : entries) {
-                var vocab = entry.getVocabulary();
-                if (seen.add(vocab.getId())) {
-                    response.add(VocabularyResponse.builder()
-                            .id(vocab.getId())
-                            .word(vocab.getWord())
-                            .kana(vocab.getKana())
-                            .romaji(vocab.getRomaji())
-                            .meaning(vocab.getMeaning())
-                            .exampleSentence(vocab.getExampleSentence())
-                            .createdAt(vocab.getCreatedAt())
-                            .build());
-                }
-            }
+        @GetMapping("/levels")
+        @Operation(summary = "Get All Levels (ordered)")
+        public ResponseEntity<ApiResponse<List<LevelResponse>>> getLevels() {
+                List<Level> levels = levelRepository.findAllByOrderByLevelOrderAsc();
+                List<LevelResponse> response = levels.stream()
+                                .map(l -> LevelResponse.builder()
+                                                .id(l.getId())
+                                                .levelName(l.getLevelName())
+                                                .adminId(l.getAdmin() != null ? l.getAdmin().getId() : null)
+                                                .adminName(l.getAdmin() != null ? l.getAdmin().getUsername() : null)
+                                                .createdAt(l.getCreatedAt())
+                                                .build())
+                                .toList();
+                return ResponseEntity.ok(ApiResponse.<List<LevelResponse>>builder()
+                                .success(true)
+                                .message("Levels retrieved successfully")
+                                .data(response)
+                                .build());
         }
 
-        return ResponseEntity.ok(ApiResponse.<List<VocabularyResponse>>builder()
-                .success(true)
-                .message("Vocabularies retrieved successfully")
-                .data(response)
-                .build());
-    }
+        @GetMapping("/levels/{levelId}/topics")
+        @Operation(summary = "Get Topics By Level (with unlock status)")
+        public ResponseEntity<ApiResponse<List<TopicResponse>>> getTopicsByLevel(
+                        @PathVariable Long levelId,
+                        @RequestParam(required = false) Long profileId) {
+                List<Topic> topics = topicRepository.findByLevelIdOrderByTopicOrderAsc(levelId);
+
+                Set<Long> completedTopicIds = new LinkedHashSet<>();
+                if (profileId != null) {
+                        profileTopicRepository.findByIdProfileIdAndTopicLevelId(profileId, levelId)
+                                        .stream()
+                                        .filter(pt -> pt.getStatus() == ProgressStatusEnum.PASS)
+                                        .forEach(pt -> completedTopicIds.add(pt.getTopic().getId()));
+                }
+
+                List<TopicResponse> response = new ArrayList<>();
+                boolean previousCompleted = true; // First topic is always unlocked
+
+                for (Topic t : topics) {
+                        boolean isUnlocked = profileId == null || previousCompleted;
+
+                        response.add(TopicResponse.builder()
+                                        .id(t.getId())
+                                        .topicName(t.getTopicName())
+                                        .levelId(t.getLevel().getId())
+                                        .levelName(t.getLevel().getLevelName())
+                                        .topicOrder(t.getTopicOrder())
+                                        .isUnlocked(isUnlocked)
+                                        .createdAt(t.getCreatedAt())
+                                        .build());
+
+                        // For next iteration, check if current topic is completed
+                        previousCompleted = completedTopicIds.contains(t.getId());
+                }
+
+                return ResponseEntity.ok(ApiResponse.<List<TopicResponse>>builder()
+                                .success(true)
+                                .message("Topics retrieved successfully")
+                                .data(response)
+                                .build());
+        }
+
+        @GetMapping("/topics/{topicId}/vocabularies")
+        @Operation(summary = "Get Vocabularies For Topic (via VocabBanks)")
+        public ResponseEntity<ApiResponse<List<VocabularyResponse>>> getVocabulariesByTopic(
+                        @PathVariable Long topicId) {
+                List<VocabBank> banks = vocabBankRepository.findByTopicId(topicId);
+                List<Long> bankIds = banks.stream().map(VocabBank::getId).toList();
+
+                Set<Long> seen = new LinkedHashSet<>();
+                List<VocabularyResponse> response = new ArrayList<>();
+
+                if (!bankIds.isEmpty()) {
+                        List<VocabBankVocabulary> entries = vocabBankVocabularyRepository
+                                        .findByVocabBankIdsWithVocabulary(bankIds);
+                        for (VocabBankVocabulary entry : entries) {
+                                var vocab = entry.getVocabulary();
+                                if (seen.add(vocab.getId())) {
+                                        response.add(VocabularyResponse.builder()
+                                                        .id(vocab.getId())
+                                                        .word(vocab.getWord())
+                                                        .kana(vocab.getKana())
+                                                        .romaji(vocab.getRomaji())
+                                                        .meaning(vocab.getMeaning())
+                                                        .exampleSentence(vocab.getExampleSentence())
+                                                        .createdAt(vocab.getCreatedAt())
+                                                        .build());
+                                }
+                        }
+                }
+
+                return ResponseEntity.ok(ApiResponse.<List<VocabularyResponse>>builder()
+                                .success(true)
+                                .message("Vocabularies retrieved successfully")
+                                .data(response)
+                                .build());
+        }
 }

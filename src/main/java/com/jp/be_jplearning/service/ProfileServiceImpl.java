@@ -62,7 +62,7 @@ public class ProfileServiceImpl implements ProfileService {
         profileLevel.setStatus(ProgressStatusEnum.LEARNING);
         profileLevelRepository.save(profileLevel);
 
-        List<Topic> topics = topicRepository.findByLevelId(level.getId());
+        List<Topic> topics = topicRepository.findByLevelIdOrderByTopicOrderAsc(level.getId());
         for (Topic topic : topics) {
             ProfileTopicId ptId = new ProfileTopicId();
             ptId.setProfileId(profile.getId());
@@ -112,7 +112,7 @@ public class ProfileServiceImpl implements ProfileService {
             } else {
                 levelStatus = pl.getStatus().name();
 
-                List<Topic> topics = topicRepository.findByLevelId(level.getId());
+                List<Topic> topics = topicRepository.findByLevelIdOrderByTopicOrderAsc(level.getId());
                 List<ProfileTopic> profileTopics = profileTopicsByLevel.getOrDefault(level.getId(), List.of());
                 Map<Long, ProfileTopic> ptMap = profileTopics.stream()
                         .collect(Collectors.toMap(pt -> pt.getTopic().getId(), pt -> pt));

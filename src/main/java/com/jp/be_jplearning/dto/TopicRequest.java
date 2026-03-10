@@ -11,4 +11,6 @@ public class TopicRequest {
 
     @NotNull(message = "must not be null")
     private Long levelId;
+
+    private Integer topicOrder;
 }
