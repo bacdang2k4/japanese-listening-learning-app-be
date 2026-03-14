@@ -99,7 +99,6 @@ public class TestServiceImpl implements TestService {
         TestAttempt attempt = new TestAttempt();
         attempt.setProfile(profile);
         attempt.setTest(test);
-        attempt.setMode(TestModeEnum.valueOf(request.getMode().toUpperCase()));
         attempt.setStatus(AttemptStatusEnum.IN_PROGRESS);
         attempt.setStartedAt(LocalDateTime.now());
 
@@ -114,7 +113,6 @@ public class TestServiceImpl implements TestService {
                 .duration(test.getDuration())
                 .passCondition(test.getPassCondition())
                 .totalQuestions(test.getTotalQuestions())
-                .mode(saved.getMode().name())
                 .status(saved.getStatus().name())
                 .startedAt(saved.getStartedAt())
                 .build();
@@ -135,8 +133,6 @@ public class TestServiceImpl implements TestService {
             throw new BusinessException("Test attempt is not in progress");
         }
 
-        boolean isPractice = attempt.getMode() == TestModeEnum.PRACTICE;
-
         List<Question> questions = questionRepository.findByTestIdOrderByQuestionOrder(testId);
 
         List<Long> questionIds = questions.stream().map(Question::getId).toList();
@@ -154,7 +150,7 @@ public class TestServiceImpl implements TestService {
                                     .answerId(a.getId())
                                     .content(a.getContent())
                                     .answerOrder(a.getAnswerOrder())
-                                    .isCorrect(isPractice ? a.getIsCorrect() : null)
+                                    .isCorrect(a.getIsCorrect())
                                     .build())
                             .toList();
 
@@ -237,7 +233,7 @@ public class TestServiceImpl implements TestService {
 
         TestResult savedResult = testResultRepository.save(testResult);
 
-        if (isPassed && attempt.getMode() == TestModeEnum.EXAM) {
+        if (isPassed) {
             handleProgression(attempt.getProfile(), attempt.getTest().getTopic());
         }
 
@@ -254,11 +250,10 @@ public class TestServiceImpl implements TestService {
         Long topicId = topic.getId();
         Level topicLevel = topic.getLevel();
 
-        // 1. Check if this topic now has at least one passed EXAM
-        long passedExams = testResultRepository.countPassedByProfileAndTopicAndMode(
-                profileId, topicId, TestModeEnum.EXAM);
-        if (passedExams <= 1) {
-            // First EXAM pass for this topic -> mark ProfileTopic as PASS
+        // 1. Check if this topic now has at least one passed test
+        long passedCount = testResultRepository.countPassedByProfileAndTopic(profileId, topicId);
+        if (passedCount <= 1) {
+            // First pass for this topic -> mark ProfileTopic as PASS
             ProfileTopicId ptId = new ProfileTopicId();
             ptId.setProfileId(profileId);
             ptId.setTopicId(topicId);
@@ -394,7 +389,6 @@ public class TestServiceImpl implements TestService {
         List<TestHistoryResponse> content = resultPage.getContent().stream().map(tr -> TestHistoryResponse.builder()
                 .resultId(tr.getId())
                 .testName(tr.getAttempt().getTest().getTestName())
-                .mode(tr.getAttempt().getMode().name())
                 .score(tr.getScore())
                 .isPassed(tr.getIsPassed())
                 .createdAt(tr.getCreatedAt())

@@ -6,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import com.jp.be_jplearning.entity.enums.TestModeEnum;
 import com.jp.be_jplearning.entity.enums.AttemptStatusEnum;
 
 import java.time.LocalDateTime;
@@ -30,11 +29,6 @@ public class TestAttempt {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "test_id")
     private AudioTest test;
-
-    @Enumerated(EnumType.STRING)
-    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
-    @Column(name = "mode", columnDefinition = "test_mode_enum")
-    private TestModeEnum mode;
 
     @Column(name = "started_at", updatable = false)
     private LocalDateTime startedAt;

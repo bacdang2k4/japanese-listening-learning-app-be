@@ -14,7 +14,6 @@ public class AdminTestResultResponse {
     private String testName;
     private String levelName;
     private String topicName;
-    private String mode;
     private Integer score;
     private Boolean isPassed;
     private Integer totalTime;

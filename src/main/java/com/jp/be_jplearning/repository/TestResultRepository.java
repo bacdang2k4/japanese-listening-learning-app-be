@@ -1,7 +1,6 @@
 package com.jp.be_jplearning.repository;
 
 import com.jp.be_jplearning.entity.TestResult;
-import com.jp.be_jplearning.entity.enums.TestModeEnum;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -18,21 +17,10 @@ public interface TestResultRepository extends JpaRepository<TestResult, Long> {
             "LOWER(l.firstName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR " +
             "LOWER(l.lastName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')) OR " +
             "LOWER(a.test.testName) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%'))) " +
-            "AND (CAST(:mode AS string) IS NULL OR a.mode = :mode) " +
             "AND (:passed IS NULL OR tr.isPassed = :passed)")
     Page<TestResult> searchTestResults(@Param("keyword") String keyword,
-            @Param("mode") TestModeEnum mode,
             @Param("passed") Boolean passed,
             Pageable pageable);
-
-    @Query("SELECT COUNT(tr) FROM TestResult tr " +
-            "WHERE tr.attempt.profile.id = :profileId " +
-            "AND tr.attempt.test.topic.id = :topicId " +
-            "AND tr.attempt.mode = :mode " +
-            "AND tr.isPassed = true")
-    long countPassedByProfileAndTopicAndMode(@Param("profileId") Long profileId,
-            @Param("topicId") Long topicId,
-            @Param("mode") TestModeEnum mode);
 
     @Query("SELECT COUNT(tr) FROM TestResult tr " +
             "WHERE tr.attempt.profile.id = :profileId " +

@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 public class TestHistoryResponse {
     private Long resultId;
     private String testName;
-    private String mode;
     private Integer score;
     private Boolean isPassed;
     private LocalDateTime createdAt;

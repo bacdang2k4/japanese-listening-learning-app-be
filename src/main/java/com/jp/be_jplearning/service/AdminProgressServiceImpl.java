@@ -6,7 +6,6 @@ import com.jp.be_jplearning.dto.AdminProfileResponse;
 import com.jp.be_jplearning.dto.AdminTestResultResponse;
 import com.jp.be_jplearning.entity.*;
 import com.jp.be_jplearning.entity.enums.ProgressStatusEnum;
-import com.jp.be_jplearning.entity.enums.TestModeEnum;
 import com.jp.be_jplearning.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -60,15 +59,7 @@ public class AdminProgressServiceImpl implements AdminProgressService {
         Sort sort = SortUtils.parseSort(sortStr, RESULT_SORT_COLUMNS, "id");
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        TestModeEnum modeEnum = null;
-        if (mode != null && !mode.isBlank()) {
-            try {
-                modeEnum = TestModeEnum.valueOf(mode.toUpperCase());
-            } catch (IllegalArgumentException ignored) {
-            }
-        }
-
-        Page<TestResult> resultPage = testResultRepository.searchTestResults(keyword, modeEnum, passed, pageable);
+        Page<TestResult> resultPage = testResultRepository.searchTestResults(keyword, passed, pageable);
 
         List<AdminTestResultResponse> content = resultPage.getContent().stream()
                 .map(this::mapToAdminTestResultResponse)
@@ -127,7 +118,6 @@ public class AdminProgressServiceImpl implements AdminProgressService {
                 .levelName(test.getTopic() != null && test.getTopic().getLevel() != null
                         ? test.getTopic().getLevel().getLevelName() : null)
                 .topicName(test.getTopic() != null ? test.getTopic().getTopicName() : null)
-                .mode(attempt.getMode().name())
                 .score(result.getScore())
                 .isPassed(result.getIsPassed())
                 .totalTime(result.getTotalTime())

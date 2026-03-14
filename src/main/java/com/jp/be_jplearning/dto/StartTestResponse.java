@@ -16,7 +16,6 @@ public class StartTestResponse {
     private Integer duration;
     private Integer passCondition;
     private Integer totalQuestions;
-    private String mode;
     private String status;
     private LocalDateTime startedAt;
 }
