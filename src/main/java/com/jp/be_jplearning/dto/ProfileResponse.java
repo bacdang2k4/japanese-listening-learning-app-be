@@ -8,6 +8,8 @@ import java.time.LocalDateTime;
 @Builder
 public class ProfileResponse {
     private Long profileId;
+    private String name;
+    private String avatarUrl;
     private String status;
     private LocalDateTime startDate;
     private String currentLevelName;

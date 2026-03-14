@@ -88,6 +88,44 @@ public class LearnerProfileController {
                 .build());
     }
 
+    @PostMapping(value = "/profiles/{profileId}/avatar", consumes = "multipart/form-data")
+    @PreAuthorize("hasRole('LEARNER')")
+    @Operation(summary = "Upload Profile Avatar", description = "Upload or update the avatar image for a specific profile.", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<Map<String, String>>> uploadProfileAvatar(
+            @PathVariable Long profileId, @RequestParam("file") MultipartFile file) {
+        String avatarUrl = profileService.uploadProfileAvatar(profileId, file);
+        return ResponseEntity.ok(ApiResponse.<Map<String, String>>builder()
+                .success(true)
+                .message("Profile avatar uploaded successfully")
+                .data(Map.of("avatarUrl", avatarUrl))
+                .build());
+    }
+
+    @DeleteMapping(value = "/profiles/{profileId}/avatar")
+    @PreAuthorize("hasRole('LEARNER')")
+    @Operation(summary = "Delete Profile Avatar", description = "Delete the avatar image for a specific profile.", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<Void>> deleteProfileAvatar(@PathVariable Long profileId) {
+        profileService.deleteProfileAvatar(profileId);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .success(true)
+                .message("Profile avatar deleted successfully")
+                .build());
+    }
+
+    @PutMapping("/profiles/{profileId}/name")
+    @PreAuthorize("hasRole('LEARNER')")
+    @Operation(summary = "Update Profile Name", description = "Update the name of a specific profile.", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<ProfileResponse>> updateProfileName(
+            @PathVariable Long profileId, @RequestBody Map<String, String> body) {
+        String name = body.get("name");
+        ProfileResponse profile = profileService.updateProfileName(profileId, name);
+        return ResponseEntity.ok(ApiResponse.<ProfileResponse>builder()
+                .success(true)
+                .message("Profile name updated successfully")
+                .data(profile)
+                .build());
+    }
+
     @PostMapping(value = "/avatar", consumes = "multipart/form-data")
     @PreAuthorize("hasRole('LEARNER')")
     @Operation(summary = "Upload Avatar", description = "Upload or update the learner's avatar image.", security = @SecurityRequirement(name = "bearerAuth"))

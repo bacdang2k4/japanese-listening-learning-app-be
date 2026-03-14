@@ -31,6 +31,12 @@ public class Profile {
     @Column(name = "status", columnDefinition = "profile_status_enum")
     private ProfileStatusEnum status = ProfileStatusEnum.LEARNING;
 
+    @Column(name = "name")
+    private String name;
+
+    @Column(name = "avatar_url")
+    private String avatarUrl;
+
     @Column(name = "start_date")
     private LocalDateTime startDate;
 

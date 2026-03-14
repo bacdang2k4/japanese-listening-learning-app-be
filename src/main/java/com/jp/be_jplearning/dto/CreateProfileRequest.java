@@ -5,6 +5,8 @@ import lombok.Data;
 
 @Data
 public class CreateProfileRequest {
+    private String name;
+
     @NotNull(message = "Level ID is required")
     private Long levelId;
 }

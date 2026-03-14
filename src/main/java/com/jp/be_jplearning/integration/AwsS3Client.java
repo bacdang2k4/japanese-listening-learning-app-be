@@ -84,4 +84,43 @@ public class AwsS3Client {
             throw new RuntimeException("S3 Delete Error: " + e.getMessage(), e);
         }
     }
+
+    public String uploadByKey(String s3Key, byte[] fileBytes, String contentType) {
+        try {
+            PutObjectRequest putObjectRequest = PutObjectRequest.builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .contentType(contentType)
+                    .build();
+
+            log.info("Uploading file with key {} to bucket {}", s3Key, bucketName);
+            s3Client.putObject(putObjectRequest, RequestBody.fromBytes(fileBytes));
+
+            String url = String.format("https://%s.s3.%s.amazonaws.com/%s", bucketName, region, s3Key);
+            log.info("Successfully uploaded file to S3: {}", url);
+            return url;
+
+        } catch (S3Exception e) {
+            log.error("Failed to upload file to S3", e);
+            throw new RuntimeException("S3 Upload Error: " + e.getMessage(), e);
+        }
+    }
+
+    public void deleteByKey(String s3Key) {
+        try {
+            software.amazon.awssdk.services.s3.model.DeleteObjectRequest deleteObjectRequest = software.amazon.awssdk.services.s3.model.DeleteObjectRequest
+                    .builder()
+                    .bucket(bucketName)
+                    .key(s3Key)
+                    .build();
+
+            log.info("Deleting file with key {} from bucket {}", s3Key, bucketName);
+            s3Client.deleteObject(deleteObjectRequest);
+            log.info("Successfully deleted file from S3: {}", s3Key);
+
+        } catch (S3Exception e) {
+            log.error("Failed to delete file from S3", e);
+            throw new RuntimeException("S3 Delete Error: " + e.getMessage(), e);
+        }
+    }
 }
