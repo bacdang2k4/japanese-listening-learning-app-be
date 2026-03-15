@@ -11,6 +11,8 @@ import org.springframework.data.repository.query.Param;
 public interface AudioTestRepository extends JpaRepository<AudioTest, Long> {
         Page<AudioTest> findByTopicIdAndStatus(Long topicId, TestStatusEnum status, Pageable pageable);
 
+        long countByTopicIdAndStatus(Long topicId, TestStatusEnum status);
+
         @Query("SELECT a FROM AudioTest a WHERE " +
                         "(:topicId IS NULL OR a.topic.id = :topicId) AND " +
                         "(CAST(:status AS string) IS NULL OR a.status = :status) AND " +

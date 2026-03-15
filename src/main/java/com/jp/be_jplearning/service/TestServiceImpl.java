@@ -194,20 +194,21 @@ public class TestServiceImpl implements TestService {
             if (question == null)
                 continue;
 
+            // Skip saving when user did not select an answer (selected_answer_id is NOT NULL in DB)
+            if (ansReq.getSelectedAnswerId() == null)
+                continue;
+
+            Answer answer = answerRepository.findById(ansReq.getSelectedAnswerId()).orElse(null);
+            if (answer == null)
+                continue;
+
             LearnerAnswer learnerAnswer = new LearnerAnswer();
             learnerAnswer.setAttempt(attempt);
             learnerAnswer.setQuestion(question);
-
-            if (ansReq.getSelectedAnswerId() != null) {
-                Answer answer = answerRepository.findById(ansReq.getSelectedAnswerId()).orElse(null);
-                if (answer != null) {
-                    learnerAnswer.setSelectedAnswer(answer);
-                    if (Boolean.TRUE.equals(answer.getIsCorrect())) {
-                        correctCount++;
-                    }
-                }
+            learnerAnswer.setSelectedAnswer(answer);
+            if (Boolean.TRUE.equals(answer.getIsCorrect())) {
+                correctCount++;
             }
-
             learnerAnswerRepository.save(learnerAnswer);
         }
 
@@ -250,10 +251,10 @@ public class TestServiceImpl implements TestService {
         Long topicId = topic.getId();
         Level topicLevel = topic.getLevel();
 
-        // 1. Check if this topic now has at least one passed test
+        // 1. Mark topic as PASS only when user has passed ALL tests in the topic
         long passedCount = testResultRepository.countPassedByProfileAndTopic(profileId, topicId);
-        if (passedCount <= 1) {
-            // First pass for this topic -> mark ProfileTopic as PASS
+        long totalTests = testRepository.countByTopicIdAndStatus(topicId, TestStatusEnum.PUBLISHED);
+        if (totalTests > 0 && passedCount >= totalTests) {
             ProfileTopicId ptId = new ProfileTopicId();
             ptId.setProfileId(profileId);
             ptId.setTopicId(topicId);
