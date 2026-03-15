@@ -248,7 +248,7 @@ public class AiTestServiceImpl implements AiTestService {
                 Number of questions: %d
                 Audio duration target: about %d minutes.
 
-                The listening transcript must be a short natural conversation between two speakers.
+                The listening transcript must be a short natural conversation between two speakers. All sentences must be in Japanese.
 
                 You MUST output exactly ONE JSON object matching the schema below.
                 Output NOTHING ELSE.
