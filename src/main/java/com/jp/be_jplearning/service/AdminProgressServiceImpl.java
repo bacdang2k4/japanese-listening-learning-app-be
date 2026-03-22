@@ -3,7 +3,9 @@ package com.jp.be_jplearning.service;
 import com.jp.be_jplearning.common.PaginationResponse;
 import com.jp.be_jplearning.common.SortUtils;
 import com.jp.be_jplearning.dto.AdminProfileResponse;
+import com.jp.be_jplearning.dto.AdminTestDetailResponse;
 import com.jp.be_jplearning.dto.AdminTestResultResponse;
+import com.jp.be_jplearning.dto.QuestionResultResponse;
 import com.jp.be_jplearning.entity.*;
 import com.jp.be_jplearning.entity.enums.ProgressStatusEnum;
 import com.jp.be_jplearning.repository.*;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,6 +30,8 @@ public class AdminProgressServiceImpl implements AdminProgressService {
     private final ProfileLevelRepository profileLevelRepository;
     private final ProfileTopicRepository profileTopicRepository;
     private final TestResultRepository testResultRepository;
+    private final LearnerAnswerRepository learnerAnswerRepository;
+    private final AnswerRepository answerRepository;
 
     private static final Set<String> PROFILE_SORT_COLUMNS = Set.of("id", "startDate", "status");
     private static final Set<String> RESULT_SORT_COLUMNS = Set.of("id", "score", "createdAt", "isPassed");
@@ -73,6 +78,82 @@ public class AdminProgressServiceImpl implements AdminProgressService {
                 .totalPages(resultPage.getTotalPages())
                 .last(resultPage.isLast())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminTestDetailResponse getTestResultDetail(Long resultId) {
+        // Fetch test result with all necessary joins
+        TestResult result = testResultRepository.findById(resultId)
+                .orElseThrow(() -> new RuntimeException("Test result not found with id: " + resultId));
+
+        TestAttempt attempt = result.getAttempt();
+        AudioTest test = attempt.getTest();
+        Learner learner = attempt.getProfile().getLearner();
+
+        // Build response using setters
+        AdminTestDetailResponse response = new AdminTestDetailResponse();
+        response.setResultId(result.getId());
+        response.setLearnerId(learner.getId());
+        response.setLearnerName(learner.getLastName() + " " + learner.getFirstName());
+        response.setLearnerEmail(learner.getEmail());
+        response.setTestName(test.getTestName());
+        response.setScore(result.getScore());
+        response.setIsPassed(result.getIsPassed());
+        response.setTotalTime(result.getTotalTime());
+        response.setCompletedAt(attempt.getCompletedAt());
+
+        // Level and topic names
+        if (test.getTopic() != null) {
+            response.setTopicName(test.getTopic().getTopicName());
+            if (test.getTopic().getLevel() != null) {
+                response.setLevelName(test.getTopic().getLevel().getLevelName());
+            }
+        }
+
+        // Get learner answers with details
+        Long attemptId = attempt.getId();
+        List<LearnerAnswer> learnerAnswers = learnerAnswerRepository.findByAttemptIdWithDetails(attemptId);
+
+        if (learnerAnswers != null && !learnerAnswers.isEmpty()) {
+            // Extract question IDs to fetch correct answers
+            List<Long> questionIds = learnerAnswers.stream()
+                    .map(la -> la.getQuestion().getId())
+                    .collect(Collectors.toList());
+
+            // Fetch correct answers for all questions
+            List<Answer> correctAnswers = answerRepository.findCorrectAnswersByQuestionIds(questionIds);
+            Map<Long, String> correctAnswerMap = correctAnswers.stream()
+                    .collect(Collectors.toMap(
+                            ans -> ans.getQuestion().getId(),
+                            ans -> ans.getContent()
+                    ));
+
+            // Build question results
+            List<QuestionResultResponse> questionResults = learnerAnswers.stream()
+                    .map(la -> {
+                        Long questionId = la.getQuestion().getId();
+                        String questionContent = la.getQuestion().getContent();
+                        String selectedAnswer = la.getSelectedAnswer() != null ? la.getSelectedAnswer().getContent() : null;
+                        String correctAnswer = correctAnswerMap.get(questionId);
+                        Boolean isCorrect = la.getSelectedAnswer() != null && la.getSelectedAnswer().getIsCorrect();
+
+                        return QuestionResultResponse.builder()
+                                .questionId(questionId)
+                                .questionContent(questionContent)
+                                .selectedAnswer(selectedAnswer)
+                                .correctAnswer(correctAnswer)
+                                .isCorrect(isCorrect != null && isCorrect)
+                                .build();
+                    })
+                    .collect(Collectors.toList());
+
+            response.setQuestionResults(questionResults);
+        } else {
+            response.setQuestionResults(List.of());
+        }
+
+        return response;
     }
 
     private AdminProfileResponse mapToAdminProfileResponse(Profile profile) {

@@ -2,6 +2,7 @@ package com.jp.be_jplearning.controller;
 
 import com.jp.be_jplearning.common.ApiResponse;
 import com.jp.be_jplearning.common.PaginationResponse;
+import com.jp.be_jplearning.dto.AdminTestDetailResponse;
 import com.jp.be_jplearning.dto.AdminTestResultResponse;
 import com.jp.be_jplearning.service.AdminProgressService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -33,6 +34,19 @@ public class AdminTestResultController {
         return ResponseEntity.ok(ApiResponse.<PaginationResponse<AdminTestResultResponse>>builder()
                 .success(true)
                 .message("Test results retrieved successfully")
+                .data(response)
+                .build());
+    }
+
+    @GetMapping("/{resultId}")
+    @Operation(summary = "Get test result detail by ID with question breakdown")
+    public ResponseEntity<ApiResponse<AdminTestDetailResponse>> getTestResultDetail(
+            @PathVariable Long resultId) {
+
+        AdminTestDetailResponse response = adminProgressService.getTestResultDetail(resultId);
+        return ResponseEntity.ok(ApiResponse.<AdminTestDetailResponse>builder()
+                .success(true)
+                .message("Test result detail retrieved successfully")
                 .data(response)
                 .build());
     }
