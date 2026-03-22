@@ -61,4 +61,10 @@ public class AudioTest {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "test_order")
+    private Integer testOrder;
+
+    @Column(name = "plain_transcript", columnDefinition = "TEXT")
+    private String plainTranscript;
 }

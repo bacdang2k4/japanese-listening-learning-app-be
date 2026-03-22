@@ -18,4 +18,6 @@ public class AudioTestResponse {
     private String status;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Integer testOrder;
+    private String plainTranscript;
 }

@@ -63,6 +63,10 @@ public class AiTestServiceImpl implements AiTestService {
         test.setCreatedByAdmin(currentAdmin);
         test.setCreatedAt(LocalDateTime.now());
 
+        // Auto-assign testOrder: max order + 1 for the topic
+        Integer maxOrder = audioTestRepository.findMaxTestOrderByTopicId(request.getTopicId());
+        test.setTestOrder(maxOrder + 1);
+
         test = audioTestRepository.save(test);
 
         String prompt = buildPrompt(request, topic);
@@ -89,6 +93,8 @@ public class AiTestServiceImpl implements AiTestService {
             final String transcript = processedTranscript;
 
             test.setTranscript(transcript);
+            // Auto-generate plain transcript (SSML-free)
+            test.setPlainTranscript(stripSSML(transcript));
             audioTestRepository.save(test);
 
             List<Map<String, Object>> questionsMap = (List<Map<String, Object>>) aiMap.get("questions");
@@ -170,6 +176,7 @@ public class AiTestServiceImpl implements AiTestService {
                 .testId(test.getId())
                 .testName(test.getTestName())
                 .transcript(test.getTranscript())
+                .plainTranscript(test.getPlainTranscript())
                 .topicId(test.getTopic().getId())
                 .status(test.getStatus().name())
                 .audioUrl(test.getAudioUrl())
@@ -241,6 +248,20 @@ public class AiTestServiceImpl implements AiTestService {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return adminRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Admin profile not found for current session"));
+    }
+
+    // Simple SSML to plain text converter
+    private String stripSSML(String ssml) {
+        if (ssml == null) return null;
+        // Remove SSML tags
+        String noTags = ssml.replaceAll("<[^>]*>", "");
+        // Decode common HTML entities that might be in SSML
+        return noTags.replaceAll("&amp;", "&")
+                     .replaceAll("&lt;", "<")
+                     .replaceAll("&gt;", ">")
+                     .replaceAll("&quot;", "\"")
+                     .replaceAll("&apos;", "'")
+                     .trim();
     }
 
     private String buildPrompt(AiGenerateRequest req, Topic topic) {

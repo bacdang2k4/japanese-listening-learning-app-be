@@ -10,6 +10,7 @@ public class AiTestResponse {
     private Long testId;
     private String testName;
     private String transcript;
+    private String plainTranscript;
     private Long topicId;
     private String status;
     private String audioUrl;

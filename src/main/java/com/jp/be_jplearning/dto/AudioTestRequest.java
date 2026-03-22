@@ -20,4 +20,10 @@ public class AudioTestRequest {
     private Integer duration;
 
     private Integer passCondition;
+
+    // Optional: if not provided, will be auto-assigned as max order + 1 for the topic
+    private Integer testOrder;
+
+    // Optional: plain text transcript (SSML-free) for display purposes
+    private String plainTranscript;
 }

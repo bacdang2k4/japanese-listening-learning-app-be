@@ -13,6 +13,9 @@ public interface AudioTestRepository extends JpaRepository<AudioTest, Long> {
 
         long countByTopicIdAndStatus(Long topicId, TestStatusEnum status);
 
+        @Query("SELECT COALESCE(MAX(a.testOrder), 0) FROM AudioTest a WHERE a.topic.id = :topicId")
+        Integer findMaxTestOrderByTopicId(@Param("topicId") Long topicId);
+
         @Query("SELECT a FROM AudioTest a WHERE " +
                         "(:topicId IS NULL OR a.topic.id = :topicId) AND " +
                         "(CAST(:status AS string) IS NULL OR a.status = :status) AND " +

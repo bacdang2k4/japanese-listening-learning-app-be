@@ -29,13 +29,15 @@ public class AudioTestServiceImpl implements AudioTestService {
     private final AudioTestRepository audioTestRepository;
     private final TopicRepository topicRepository;
 
-    private static final Set<String> ALLOWED_SORT = Set.of("id", "testName", "createdAt", "status", "duration");
+    private static final Set<String> ALLOWED_SORT = Set.of("id", "testName", "createdAt", "status", "duration", "testOrder");
 
     @Override
     @Transactional(readOnly = true)
     public PaginationResponse<AudioTestResponse> getAudioTests(int page, int size, Long topicId, TestStatusEnum status,
             String keyword, String sortStr) {
-        Pageable pageable = PageRequest.of(page, size, SortUtils.parseSort(sortStr, ALLOWED_SORT, "createdAt"));
+        // Default sort: by testOrder ASC when filtering by topic, otherwise by createdAt DESC
+        String defaultSort = (topicId != null) ? "testOrder,asc" : "createdAt,desc";
+        Pageable pageable = PageRequest.of(page, size, SortUtils.parseSort(sortStr, ALLOWED_SORT, defaultSort));
 
         Page<AudioTest> testPage = audioTestRepository.searchAudioTests(topicId, status, keyword, pageable);
 
@@ -77,6 +79,21 @@ public class AudioTestServiceImpl implements AudioTestService {
         test.setStatus(TestStatusEnum.DRAFT);
         test.setCreatedAt(LocalDateTime.now());
 
+        // Auto-assign testOrder: if provided use it, otherwise max + 1 for the topic
+        if (request.getTestOrder() != null) {
+            test.setTestOrder(request.getTestOrder());
+        } else {
+            Integer maxOrder = audioTestRepository.findMaxTestOrderByTopicId(request.getTopicId());
+            test.setTestOrder(maxOrder + 1);
+        }
+
+        // Auto-generate plain transcript from SSML if not provided
+        if (request.getPlainTranscript() != null) {
+            test.setPlainTranscript(request.getPlainTranscript());
+        } else if (request.getTranscript() != null && !request.getTranscript().isEmpty()) {
+            test.setPlainTranscript(stripSSML(request.getTranscript()));
+        }
+
         return mapToResponse(audioTestRepository.save(test));
     }
 
@@ -99,6 +116,16 @@ public class AudioTestServiceImpl implements AudioTestService {
         test.setDuration(request.getDuration());
         if (request.getPassCondition() != null) {
             test.setPassCondition(request.getPassCondition());
+        }
+        if (request.getTestOrder() != null) {
+            test.setTestOrder(request.getTestOrder());
+        }
+        // Update plain transcript if provided or if transcript changed
+        if (request.getPlainTranscript() != null) {
+            test.setPlainTranscript(request.getPlainTranscript());
+        } else if (request.getTranscript() != null &&
+                   !request.getTranscript().equals(test.getTranscript())) {
+            test.setPlainTranscript(stripSSML(request.getTranscript()));
         }
         test.setUpdatedAt(LocalDateTime.now());
 
@@ -147,6 +174,21 @@ public class AudioTestServiceImpl implements AudioTestService {
                 .status(test.getStatus() != null ? test.getStatus().name() : null)
                 .createdAt(test.getCreatedAt())
                 .updatedAt(test.getUpdatedAt())
+                .testOrder(test.getTestOrder())
                 .build();
+    }
+
+    // Simple SSML to plain text converter
+    private String stripSSML(String ssml) {
+        if (ssml == null) return null;
+        // Remove SSML tags
+        String noTags = ssml.replaceAll("<[^>]*>", "");
+        // Decode common HTML entities that might be in SSML
+        return noTags.replaceAll("&amp;", "&")
+                     .replaceAll("&lt;", "<")
+                     .replaceAll("&gt;", ">")
+                     .replaceAll("&quot;", "\"")
+                     .replaceAll("&apos;", "'")
+                     .trim();
     }
 }
