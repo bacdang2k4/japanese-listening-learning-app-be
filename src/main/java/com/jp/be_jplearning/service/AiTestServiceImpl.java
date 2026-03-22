@@ -58,7 +58,7 @@ public class AiTestServiceImpl implements AiTestService {
         test.setTopic(topic);
         test.setDuration(request.getDuration());
         test.setTotalQuestions(request.getQuestionCount());
-        test.setStatus(TestStatusEnum.AI_GENERATED); // Keep as AI_GENERATED while audio creates
+        test.setStatus(TestStatusEnum.GENERATING);
         test.setIsAiGenerated(true);
         test.setCreatedByAdmin(currentAdmin);
         test.setCreatedAt(LocalDateTime.now());
@@ -93,6 +93,9 @@ public class AiTestServiceImpl implements AiTestService {
 
             List<Map<String, Object>> questionsMap = (List<Map<String, Object>>) aiMap.get("questions");
             saveQuestionsAndAnswers(test, questionsMap);
+
+            test.setStatus(TestStatusEnum.AI_GENERATED);
+            audioTestRepository.save(test);
 
             logEntry.setStatus(GenerationStatusEnum.SUCCESS);
             AIGenerationLog savedLog = aiGenerationLogRepository.save(logEntry);
