@@ -189,18 +189,21 @@ public class TestServiceImpl implements TestService {
         int correctCount = 0;
         int totalQuestions = questions.size();
 
+        // Only process answers that have selectedAnswerId (partial submission allowed)
         for (LearnerAnswerRequest ansReq : request.getAnswers()) {
-            Question question = questionMap.get(ansReq.getQuestionId());
-            if (question == null)
-                continue;
+            if (ansReq.getSelectedAnswerId() == null) {
+                continue; // Skip unanswered questions
+            }
 
-            // Skip saving when user did not select an answer (selected_answer_id is NOT NULL in DB)
-            if (ansReq.getSelectedAnswerId() == null)
+            Question question = questionMap.get(ansReq.getQuestionId());
+            if (question == null) {
                 continue;
+            }
 
             Answer answer = answerRepository.findById(ansReq.getSelectedAnswerId()).orElse(null);
-            if (answer == null)
+            if (answer == null) {
                 continue;
+            }
 
             LearnerAnswer learnerAnswer = new LearnerAnswer();
             learnerAnswer.setAttempt(attempt);
@@ -212,6 +215,8 @@ public class TestServiceImpl implements TestService {
             learnerAnswerRepository.save(learnerAnswer);
         }
 
+        // Score calculation: (correct answers / total questions) * 100
+        // Even if learner only answered some questions, divide by total questions
         int score = totalQuestions == 0 ? 0 : (int) Math.round(((double) correctCount / totalQuestions) * 100);
         boolean isPassed = score >= (attempt.getTest().getPassCondition() == null ? 80
                 : attempt.getTest().getPassCondition());
